@@ -1,6 +1,8 @@
 // Balance search tool (no-op unless env vars are set). Examples:
 //   GRID='[{"fDefer":0.5,"rules":{"nightly":{"power":-5,"life":-7,"shield":-4}}}]' npx vitest run tests/tools/search.test.ts -t "^search"
 //   RS=1 ITER=150 N=120 NARROW=1 RESCUE=1 npx vitest run tests/tools/search.test.ts -t "random search"
+//   GRID='[{}]' RESCUE=1 FORCE='[["s6_shelter","regolith"]]' npx vitest run tests/tools/search.test.ts -t "^search"
+//     ({} = current config; RESCUE prints autopilot/strict rescue, FORCE the careful bot's win rate with an option forced)
 // Knobs map to content/tuning.ts (fDefer/fQuick/fRobust/fCreative/rs) and config rules.
 import { it } from 'vitest';
 import { BOTS, type BotName } from '../../src/bots/bots';
@@ -59,7 +61,27 @@ it('search', () => {
       for (const c of ['power', 'life', 'shield'] as const) causes[c] += st.lossCauses[c];
     }
     const cs = (['power', 'life', 'shield'] as const).map((c) => Math.round((100 * causes[c]) / (losses || 1)));
-    lines.push(`R${r.random}(${r.randomC}) C${r.cheapest}(${r.cheapestC}) B${r.robust}(${r.robustC}) K${r.careful}(${r.carefulC}) agg ${cs.join('/')} <- ${JSON.stringify(o)}`);
+    // FORCE='[["s6_shelter","regolith"],...]': careful-bot win rate with that option forced.
+    let forcedTxt = '';
+    if (process.env.FORCE) {
+      for (const [fid, oid] of JSON.parse(process.env.FORCE) as [string, string][]) {
+        const forced = ((st: any, e: any, rr: any) =>
+          st.faults.some((x: any) => x.faultId === fid) && !e.check(st, { type: 'resolve', faultId: fid, optionId: oid })
+            ? { type: 'resolve', faultId: fid, optionId: oid }
+            : BOTS.careful(st, e, rr)) as any;
+        forcedTxt += ` ${fid.split('_')[0]}${oid}=${Math.round(runBatch(eng, forced, seedRange(n), cfg).winRate * 100)}`;
+      }
+    }
+    let resc = '';
+    if (process.env.RESCUE) {
+      // Both rescue measures over the random bot's losses: autopilot, strict (do nothing).
+      const rb = runBatch(eng, BOTS.random, seedRange(n), cfg);
+      const lostRuns = rb.runs.filter((x) => !x.final.outcome!.won);
+      const rate = (auto: any) =>
+        Math.round((100 * lostRuns.filter((x) => findRescues(eng, { seed: x.seed, config: cfg, actions: x.actions }, auto, { firstOnly: true }).length > 0).length) / (lostRuns.length || 1));
+      resc = ` rescue ${rate(BOTS.careful)}/strict ${rate(() => ({ type: 'endSol' }))}`;
+    }
+    lines.push(`${resc}${forcedTxt} R${r.random}(${r.randomC}) C${r.cheapest}(${r.cheapestC}) B${r.robust}(${r.robustC}) K${r.careful}(${r.carefulC}) agg ${cs.join('/')} <- ${JSON.stringify(o)}`);
   }
   process.stdout.write(lines.join('\n') + '\n');
 });

@@ -5,9 +5,10 @@ import type { Action, GameState } from '../sim/types';
 import { BlackBox } from './BlackBox';
 import type { Level } from './parts';
 import { Play, type LastAction, type TutorialStep } from './Play';
+import { DataScreen } from './DataViews';
 import { Briefing, End, SolReport, Start } from './Screens';
 
-type Screen = 'start' | 'briefing' | 'play' | 'report' | 'end' | 'blackbox';
+type Screen = 'start' | 'briefing' | 'play' | 'report' | 'end' | 'blackbox' | 'data';
 
 interface Session {
   seed: number;
@@ -23,6 +24,11 @@ export function App() {
   const [screen, setScreen] = useState<Screen>('start');
   const [session, setSession] = useState<Session | null>(null);
   const [reportSol, setReportSol] = useState(1);
+  const [dataFrom, setDataFrom] = useState<Screen>('start');
+  const openData = (from: Screen) => {
+    setDataFrom(from);
+    setScreen('data');
+  };
 
   const start = (seed: number, level: Level, tutorialOn: boolean) => {
     setSession({
@@ -49,7 +55,8 @@ export function App() {
     }
   };
 
-  if (screen === 'start' || !session) return <Start onStart={start} />;
+  if (screen === 'data') return <DataScreen onBack={() => setScreen(dataFrom)} />;
+  if (screen === 'start' || !session) return <Start onStart={start} onData={() => openData('start')} />;
   const s = session.state;
   const log: MissionLog = { seed: session.seed, config: DEFAULT_CONFIG, actions: session.actions };
 
@@ -78,6 +85,7 @@ export function App() {
           onBlackBox={() => setScreen('blackbox')}
           onAgain={() => setScreen('start')}
           onSame={() => start(session.seed, session.level, session.tutorialOn)}
+          onData={() => openData('end')}
         />
       );
     case 'blackbox':

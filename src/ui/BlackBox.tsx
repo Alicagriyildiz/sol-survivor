@@ -10,11 +10,11 @@ import {
   type MissionLog,
   type Rescue,
 } from '../blackbox';
-import { engine, fmt, tr } from '../content';
+import { data, engine, fmt, tr } from '../content';
 import { numSuffix } from '../content/lang/tr';
 import { reservesUsed } from '../sim/selectors';
 import type { GameState, Invalid } from '../sim/types';
-import { Chart, fmtNum, type Level } from './parts';
+import { Chart, fmtDate, fmtMGy, fmtNum, type Level } from './parts';
 import { colors } from './tokens';
 
 const invalidText = (r: Invalid) =>
@@ -28,7 +28,7 @@ function OutcomeCard({ title, s, color, autopilotFrom = null }: { title: string;
       <h3 style={{ color }}>{title}</h3>
       <p className="big-line">{o.won ? `✅ ${tr.blackbox.survived}` : `🛑 ${fmt(tr.blackbox.died, { sol: o.sol })}`}</p>
       <p className="small">
-        ♥ {tr.res.health}: <strong>{fmtNum(s.health, 0)}</strong> · ☢ {tr.res.dose}: <strong>{fmtNum(s.dose, 0)}</strong>
+        ♥ {tr.res.health}: <strong>{fmtNum(s.health, 0)}</strong> · ☢ {tr.res.dose}: <strong>{fmtMGy(s.dose)}</strong>
       </p>
       <p className="small">
         🔋{' '}
@@ -231,6 +231,9 @@ export function BlackBox({ log, final, level, onBack }: { log: MissionLog; final
                 <li key={i}>{t}</li>
               ))}
             </ol>
+            {result.explanation.steps.some((st) => (st.type === 'linked' || st.type === 'changed') && st.sol === data.SOLAR_EVENT_SOL) && (
+              <SolarEventLine s={final} />
+            )}
             {result.alt.skipped.length > 0 && <p className="dim small">ℹ {tr.blackbox.skipped}</p>}
             {level === 'commander' && result.explanation.firstDivergenceSol !== null && (
               <p className="dim small">
@@ -242,4 +245,10 @@ export function BlackBox({ log, final, level, onBack }: { log: MissionLog; final
       )}
     </div>
   );
+}
+
+/** The real DONKI event behind sol 12; both missions get the same one (same seed). */
+function SolarEventLine({ s }: { s: GameState }) {
+  const e = data.solarEventOf(s);
+  return <p className="note small">☀ {fmt(tr.solarEvent.blackbox, { date: fmtDate(e.date), cls: e.classType })}</p>;
 }

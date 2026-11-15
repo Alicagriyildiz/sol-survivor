@@ -1,5 +1,6 @@
 // The 15-sol scenario as data. Text lives in lang/tr.ts, keyed by the ids used here.
 import { applyTuning, TUNING } from './tuning';
+import { SOLAR_EVENT_ROLL, SOLAR_EVENTS, STORM_NIGHT_POWER_LOSS } from './data';
 import type { Amount, ChainNote, Cond, ContentPack, Effect, OptionDef, ResourceId, SolDef } from '../sim/types';
 
 // ---------------------------------------------------------------- effect helpers
@@ -163,7 +164,7 @@ const sol5: SolDef = {
       id: 's5_oxygen',
       station: 'hub',
       options: [
-        { id: 'fullPower', kind: 'robust', hours: 2, effects: [P(-14), L(12)] },
+        { id: 'fullPower', kind: 'robust', hours: 2, effects: [P(-10), L(12)] },
         { id: 'halfNight', kind: 'quick', hours: 1, effects: [P(-6), L(5)] },
         {
           id: 'plants',
@@ -186,9 +187,16 @@ const sol6: SolDef = {
       id: 's6_shelter',
       station: 'shelter',
       options: [
-        { id: 'regolith', kind: 'robust', hours: 5, effects: [P(-4), S(8), flag('shelterReinforced')], tags: ['invest'] },
+        // A thick wall also wears less every night (regolith cover, see the sol 6 note).
+        {
+          id: 'regolith',
+          kind: 'robust',
+          hours: 4,
+          effects: [P(-2), S(8), flag('shelterReinforced'), mod('thickWall', { shield: 1.5 }, { sols: 9 })],
+          tags: ['invest'],
+        },
         { id: 'waterWall', kind: 'quick', hours: 2, effects: [L(-4), S(5), flag('shelterWater')], tags: ['invest'] },
-        defer([S(-3)]),
+        defer([S(-6)]),
       ],
     },
   ],
@@ -203,7 +211,7 @@ const sol7: SolDef = {
       options: [
         { id: 'follow', kind: 'robust', hours: 2, effects: [P(8), L(-6), flag('beaconReserve')], tags: ['invest'] },
         { id: 'ownCall', kind: 'quick', hours: 1, effects: [L(3), P(-2)] },
-        { id: 'report', kind: 'creative', hours: 3, effects: [P(3), L(-2), flag('sentReport')], tags: ['invest'] },
+        { id: 'report', kind: 'creative', hours: 3, effects: [L(-2), flag('sentReport')], tags: ['invest'] },
         defer([later(1, 'morning', 'repeatMessage', [{ kind: 'hours', amount: -2 }])]),
       ],
     },
@@ -227,7 +235,7 @@ const sol8: SolDef = {
       id: 's8_secure',
       station: 'solar',
       options: [
-        { id: 'anchor', kind: 'robust', hours: 3, effects: [flag('panelsSecured')], tags: ['invest'] },
+        { id: 'anchor', kind: 'robust', hours: 2, effects: [flag('panelsSecured')], tags: ['invest'] },
         { id: 'cables', kind: 'quick', hours: 1, station: 'airlock', effects: [flag('panelsHalf')] },
         defer([]),
       ],
@@ -244,7 +252,8 @@ const sol9: SolDef = {
     unmod('dustLight'),
     S(-5),
     iff({ flag: 'stormPrepped' }, [P({ roll: 'stormHit', mul: -2, add: -4 })], [P({ roll: 'stormHit', mul: -3, add: -10 })]),
-    ...[1, 2, 3, 4].map((n) => iff({ roll: 'stormNights', eq: n }, [mod('storm', { power: -5 }, { sols: n })])),
+    // Storm nights: the panels give nothing (2018 storm opacity, see content/data.ts).
+    ...[1, 2, 3, 4].map((n) => iff({ roll: 'stormNights', eq: n }, [mod('storm', { power: -STORM_NIGHT_POWER_LOSS }, { sols: n })])),
   ],
   faults: [
     {
@@ -317,16 +326,22 @@ const sol11: SolDef = {
   ],
 };
 
-/** Solar particle event: base strength grows with the `speSize` roll. */
-const spe = (factor: number): Amount => ({ roll: 'speSize', mul: 12 * factor, add: 30 * factor });
+/** Solar particle event: one real DONKI event per mission, picked by the `speEvent` roll.
+ *  Its strength comes from the data (content/data.ts); `factor` is how much of it reaches
+ *  the astronaut for each choice. */
+const onEvent = (build: (radiation: number, shieldHit: number) => Effect[]): Effect[] =>
+  SOLAR_EVENTS.map((e) => iff({ roll: SOLAR_EVENT_ROLL, eq: e.index }, build(e.radiation, e.shieldHit)));
+const speRad = (factor: number): Effect[] => onEvent((r) => [rad(r * factor)]);
 const speHit = (inShelter: [number, number, number]): Effect =>
-  iff({ flag: 'shelterReinforced' }, [rad(spe(inShelter[0]))], [
-    iff({ flag: 'shelterWater' }, [rad(spe(inShelter[1]))], [rad(spe(inShelter[2]))]),
+  iff({ flag: 'shelterReinforced' }, speRad(inShelter[0]), [
+    iff({ flag: 'shelterWater' }, speRad(inShelter[1]), speRad(inShelter[2])),
   ]);
 
 const sol12: SolDef = {
   sol: 12,
   notes: shelterNotes,
+  // The particles arrive in the morning; the stronger the event, the more Shield it costs.
+  morning: onEvent((_, shieldHit) => [S(-shieldHit)]),
   faults: [
     {
       id: 's12_spe',
@@ -334,8 +349,8 @@ const sol12: SolDef = {
       options: [
         { id: 'hideAll', kind: 'robust', hours: 6, effects: [speHit([0.1, 0.2, 0.3])], notes: shelterNotes },
         { id: 'hideShort', kind: 'quick', hours: 3, effects: [speHit([0.25, 0.35, 0.5])], notes: shelterNotes },
-        { id: 'waterCorner', kind: 'creative', hours: 2, station: 'airlock', effects: [L(-4), rad(spe(0.45))] },
-        defer([rad(spe(0.8))], []),
+        { id: 'waterCorner', kind: 'creative', hours: 2, station: 'airlock', effects: [L(-4), ...speRad(0.45)] },
+        defer(speRad(0.8), []),
       ],
     },
   ],
@@ -364,7 +379,7 @@ const sol13: SolDef = {
       id: 's13_pad',
       station: 'landing',
       options: [
-        { id: 'clearPad', kind: 'robust', hours: 3, effects: [flag('padClear')], tags: ['invest'] },
+        { id: 'clearPad', kind: 'robust', hours: 2.5, effects: [flag('padClear')], tags: ['invest'] },
         { id: 'markPad', kind: 'quick', hours: 1, effects: [flag('padMarked')] },
         defer([]),
       ],
@@ -423,8 +438,14 @@ const sol15: SolDef = {
           id: 'fullBeacon',
           kind: 'robust',
           hours: 1,
-          effects: [iff({ flag: 'beaconReserve' }, [P(-6)], [P(-22)])],
-          notes: [note({ flag: 'beaconReserve' }, 'beaconReserve'), note({ notFlag: 'beaconReserve' }, 'noBeaconReserve')],
+          // The lander comes down right at a prepared pad: the first supplies arrive at once.
+          effects: [iff({ flag: 'beaconReserve' }, [P(-6)], [P(-22)]), iff({ flag: 'padClear' }, [L(5)], [iff({ flag: 'padMarked' }, [L(3)])])],
+          notes: [
+            note({ flag: 'beaconReserve' }, 'beaconReserve'),
+            note({ notFlag: 'beaconReserve' }, 'noBeaconReserve'),
+            note({ flag: 'padClear' }, 'padClear'),
+            note({ all: [{ notFlag: 'padClear' }, { flag: 'padMarked' }] }, 'padMarked'),
+          ],
         },
         {
           id: 'dimBeacon',
@@ -481,7 +502,7 @@ export const RAW_SCENARIO: ContentPack = {
     { id: 'stormHit', min: 0, max: 5 },
     { id: 'stormNights', min: 1, max: 4 },
     { id: 'windCleans', min: 0, max: 1 },
-    { id: 'speSize', min: 0, max: 3 },
+    { id: SOLAR_EVENT_ROLL, min: 0, max: SOLAR_EVENTS.length - 1 },
     { id: 'sol13v', min: 0, max: 1 },
     { id: 'leakSize', min: 0, max: 2 },
     { id: 'sol14v', min: 0, max: 1 },

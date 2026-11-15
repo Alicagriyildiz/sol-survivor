@@ -1,0 +1,15 @@
+{
+  "source": "NASA OSDR RadLab (radiation dosimetry database), ISS DOSIS-3D DosTel1 detector, Columbus module",
+  "attribution": "Data: NASA Open Science Data Repository (OSDR) RadLab. https://visualization.osdr.nasa.gov/radlab/",
+  "request": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument_id=DosTel1&timestamp%3E=2022-03-01T00:00&timestamp%3C2022-04-01T00:00&absorbed_dose_rate&module&format=tsv",
+  "query": "ISS, instrument DosTel1, 2022-03-01 to 2022-04-01, field absorbed_dose_rate (unit µGy/hour per RadLab API docs)",
+  "downloadedAt": "2026-11-15",
+  "unit": "µGy/hour (absorbed dose rate)",
+  "readings": 37209,
+  "hoursCovered": 743.6,
+  "module": "Columbus",
+  "method": "time-weighted mean; each reading holds until the next one, gaps capped at 10 minutes",
+  "timeWeightedMeanUGyPerHour": 12.235,
+  "plainMeanOfReadingsUGyPerHour": 30.705,
+  "mGyPerDay": 0.294
+}

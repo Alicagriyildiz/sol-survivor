@@ -197,3 +197,28 @@ p { margin: 0.3rem 0 0.6rem; }
   .play-main { grid-template-columns: 1fr; }
   .bb-grid, .side-by-side { grid-template-columns: 1fr; }
 }
+
+/* ---- real NASA data (session 3) ---- */
+a { color: var(--c-accent); }
+.block { display: block; margin-top: 0.2rem; }
+.data-card { border-left: 3px solid var(--c-accent); margin: 0.5rem 0; }
+.data-card h4 { margin: 0 0 0.3rem; }
+.data-line { margin: 0.4rem 0; padding-left: 0.5rem; border-left: 2px solid var(--c-accent-dim); }
+.dose-meter { font-size: 0.9rem; color: var(--c-text-dim); margin-top: 0.2rem; }
+.dose-meter summary { cursor: pointer; list-style: none; }
+.dose-meter summary::-webkit-details-marker { display: none; }
+.info-btn { display: inline-block; min-width: 1.4rem; text-align: center; border: 1px solid var(--c-border); border-radius: 50%; color: var(--c-accent); }
+.dose-meter .popover {
+  position: absolute; z-index: 30; max-width: min(340px, calc(100vw - 32px)); margin-top: 0.3rem;
+  background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-accent); border-radius: 10px; padding: 0.6rem 0.8rem;
+}
+.dose-meter .popover p { margin: 0.35rem 0; }
+.data-table { display: grid; gap: 0.5rem; margin: 0.8rem 0; }
+.data-row { display: grid; grid-template-columns: 2.2fr 1.2fr 0.9fr 2fr; gap: 0.8rem; align-items: start; margin: 0; }
+.data-row.head { font-weight: 600; color: var(--c-text-dim); padding: 0 1rem; }
+.mlabel { display: none; font-weight: 600; color: var(--c-text-dim); }
+@media (max-width: 760px) {
+  .data-row { grid-template-columns: 1fr; gap: 0.35rem; }
+  .data-row.head { display: none; }
+  .mlabel { display: inline; }
+}

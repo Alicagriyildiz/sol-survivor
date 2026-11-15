@@ -1,0 +1,139 @@
+{
+  "source": "NASA DONKI (Space Weather Database Of Notifications, Knowledge, Information), CCMC at NASA Goddard",
+  "attribution": "Data: NASA Community Coordinated Modeling Center (CCMC), DONKI. https://ccmc.gsfc.nasa.gov/tools/DONKI/",
+  "endpoint": "https://ccmc.gsfc.nasa.gov/DONKI/WS/get/FLR and https://ccmc.gsfc.nasa.gov/DONKI/WS/get/SEP (keyless; same data as api.nasa.gov/DONKI)",
+  "query": "FLR and SEP, startDate 2010-04-01 to endDate 2025-12-31, in 60-day windows (192 requests)",
+  "exampleRequest": "https://ccmc.gsfc.nasa.gov/DONKI/WS/get/FLR?startDate=2010-04-01&endDate=2010-05-30",
+  "downloadedAt": "2026-11-15",
+  "counts": {
+    "flares": 3058,
+    "sepEvents": 459,
+    "flaresWithLinkedSEP": 134
+  },
+  "selectionRule": "Flares linked to >=1 SEP event; one per peak-flux band (C, M1-M5, M5-X1, X1-X5, >=X5); inside a band most linked SEP records, ties -> later; picks never share an SEP record (strongest band first); >=X5 band prefers 2017-09-10 X8.2 (particles reported at Mars by Curiosity RAD).",
+  "events": [
+    {
+      "band": "C",
+      "flrID": "2025-01-04T18:46:00-FLR-001",
+      "classType": "C7.6",
+      "peakFluxWm2": 0.000007599999999999999,
+      "beginTime": "2025-01-04T18:46Z",
+      "peakTime": "2025-01-04T19:15Z",
+      "endTime": "2025-01-04T19:52Z",
+      "sourceLocation": "S17W57",
+      "activeRegionNum": 13939,
+      "instruments": [
+        "GOES-P: EXIS 1.0-8.0"
+      ],
+      "linkedSEP": [
+        "2025-01-04T21:46:00-SEP-001",
+        "2025-01-04T22:15:00-SEP-001",
+        "2025-01-04T22:23:00-SEP-001",
+        "2025-01-05T01:03:00-SEP-001",
+        "2025-01-05T02:35:00-SEP-001"
+      ],
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/36259/-1",
+      "candidatesInBand": 16
+    },
+    {
+      "band": "M1",
+      "flrID": "2023-09-01T03:26:00-FLR-001",
+      "classType": "M1.2",
+      "peakFluxWm2": 0.000012,
+      "beginTime": "2023-09-01T03:26Z",
+      "peakTime": "2023-09-01T03:52Z",
+      "endTime": "2023-09-01T04:06Z",
+      "sourceLocation": "N09W70",
+      "activeRegionNum": 13413,
+      "instruments": [
+        "GOES-P: EXIS 1.0-8.0"
+      ],
+      "linkedSEP": [
+        "2023-09-01T04:30:00-SEP-001",
+        "2023-09-01T04:34:00-SEP-001",
+        "2023-09-01T04:34:00-SEP-002",
+        "2023-09-01T04:34:00-SEP-003",
+        "2023-09-01T04:49:00-SEP-001",
+        "2023-09-01T04:49:00-SEP-002",
+        "2023-09-01T05:05:00-SEP-001",
+        "2023-09-01T05:05:00-SEP-002"
+      ],
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/26695/-1",
+      "candidatesInBand": 41
+    },
+    {
+      "band": "M5",
+      "flrID": "2024-06-08T01:23:00-FLR-001",
+      "classType": "M9.7",
+      "peakFluxWm2": 0.000097,
+      "beginTime": "2024-06-08T01:23Z",
+      "peakTime": "2024-06-08T01:49Z",
+      "endTime": "2024-06-08T02:19Z",
+      "sourceLocation": "S17W68",
+      "activeRegionNum": 13697,
+      "instruments": [
+        "GOES-P: EXIS 1.0-8.0"
+      ],
+      "linkedSEP": [
+        "2024-06-08T02:25:00-SEP-001",
+        "2024-06-08T02:55:00-SEP-001",
+        "2024-06-08T03:09:00-SEP-001",
+        "2024-06-08T03:34:00-SEP-001",
+        "2024-06-08T03:36:00-SEP-001",
+        "2024-06-08T04:14:00-SEP-001",
+        "2024-06-08T04:14:00-SEP-002",
+        "2024-06-08T04:20:00-SEP-001",
+        "2024-06-08T04:48:00-SEP-001"
+      ],
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/31335/-1",
+      "candidatesInBand": 30
+    },
+    {
+      "band": "X1",
+      "flrID": "2024-10-26T06:32:00-FLR-001",
+      "classType": "X1.8",
+      "peakFluxWm2": 0.00018,
+      "beginTime": "2024-10-26T06:32Z",
+      "peakTime": "2024-10-26T07:19Z",
+      "endTime": "2024-10-26T07:56Z",
+      "sourceLocation": "S16E60",
+      "activeRegionNum": 13873,
+      "instruments": [
+        "GOES-P: EXIS 1.0-8.0"
+      ],
+      "linkedSEP": [
+        "2024-10-26T16:45:00-SEP-001",
+        "2024-10-26T18:05:00-SEP-001",
+        "2024-10-26T18:57:00-SEP-001",
+        "2024-10-26T19:02:00-SEP-001",
+        "2024-10-26T19:50:00-SEP-001",
+        "2024-10-26T20:06:00-SEP-001",
+        "2024-10-26T21:43:00-SEP-001",
+        "2024-10-28T08:57:00-SEP-001"
+      ],
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/34206/-1",
+      "candidatesInBand": 38
+    },
+    {
+      "band": "X5",
+      "flrID": "2017-09-10T15:35:00-FLR-001",
+      "classType": "X8.2",
+      "peakFluxWm2": 0.00082,
+      "beginTime": "2017-09-10T15:35Z",
+      "peakTime": "2017-09-10T16:06Z",
+      "endTime": "2017-09-10T16:31Z",
+      "sourceLocation": "S08W88",
+      "activeRegionNum": 12673,
+      "instruments": [
+        "GOES15: SEM/XRS 1.0-8.0"
+      ],
+      "linkedSEP": [
+        "2017-09-10T16:25:00-SEP-001",
+        "2017-09-10T16:45:00-SEP-001",
+        "2017-09-10T20:00:00-SEP-001"
+      ],
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/FLR/13098/-1",
+      "candidatesInBand": 7
+    }
+  ]
+}

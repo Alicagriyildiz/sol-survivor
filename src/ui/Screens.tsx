@@ -4,10 +4,11 @@ import { SOURCES, engine, fmt, tr } from '../content';
 import { numSuffix } from '../content/lang/tr';
 import { activeNotes, reservesUsed, score, solReportRows, todayFaults, type ReportRow, type ReportSection } from '../sim/selectors';
 import { RESOURCES, type Deltas, type GameState } from '../sim/types';
-import { Chart, DeltaList, fmtNum, type Level } from './parts';
+import { DoseCompare, SpaceWeatherLine, StormLine, StudyLine } from './DataViews';
+import { Chart, DeltaList, fmtMGy, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
 
-export function Start({ onStart }: { onStart: (seed: number, level: Level, tutorial: boolean) => void }) {
+export function Start({ onStart, onData }: { onStart: (seed: number, level: Level, tutorial: boolean) => void; onData: () => void }) {
   const [seed, setSeed] = useState(() => 1 + Math.floor(Math.random() * 9999));
   const [level, setLevel] = useState<Level>('junior');
   const [tutorial, setTutorial] = useState(true);
@@ -40,6 +41,9 @@ export function Start({ onStart }: { onStart: (seed: number, level: Level, tutor
           🚀 {tr.ui.start}
         </button>
       </div>
+      <button className="btn" onClick={onData}>
+        📊 {tr.data.open}
+      </button>
       <div className="card glossary">
         <h3>{tr.ui.glossaryTitle}</h3>
         <dl>
@@ -70,6 +74,8 @@ export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
         <h3>🌤 {tr.ui.weather}</h3>
         <p>{t.weather}</p>
         {storm && <p className="note danger small">🔒 {tr.ui.briefingStorm}</p>}
+        <SpaceWeatherLine s={s} />
+        <StormLine sol={s.sol} />
       </div>
       <div className="card today-card">
         <h3>🎯 {tr.ui.briefingToday}</h3>
@@ -155,9 +161,18 @@ export function RealNote({ sol }: { sol: number }) {
       <p>{tr.notes[sol]}</p>
       {src && (
         <p className="dim small">
-          {tr.ui.source}: {src.source} {!src.verified && <span className="badge">{tr.ui.unverified}</span>}
+          {tr.ui.source}:{' '}
+          {src.urls[0] ? (
+            <a href={src.urls[0]} target="_blank" rel="noopener noreferrer">
+              {src.source}
+            </a>
+          ) : (
+            src.source
+          )}{' '}
+          {!src.verified && <span className="badge">{tr.ui.unverified}</span>}
         </p>
       )}
+      <StudyLine sol={sol} />
     </div>
   );
 }
@@ -224,12 +239,14 @@ export function End({
   onBlackBox,
   onAgain,
   onSame,
+  onData,
 }: {
   s: GameState;
   level: Level;
   onBlackBox: () => void;
   onAgain: () => void;
   onSame: () => void;
+  onData: () => void;
 }) {
   const o = s.outcome!;
   return (
@@ -252,7 +269,7 @@ export function End({
             </li>
           ))}
           <li>
-            {resourceIcon.dose} {tr.ui.dose}: <strong>{fmtNum(s.dose, 0)}</strong>
+            {resourceIcon.dose} {tr.ui.dose}: <strong>{fmtMGy(s.dose)}</strong>
           </li>
           <li>
             ⭐ {tr.ui.score}: <strong>{score(s)}</strong>
@@ -271,6 +288,7 @@ export function End({
         </p>
         <Chart metric="health" series={[{ name: 'health', color: colors.accent, data: s.history }]} />
       </div>
+      <DoseCompare s={s} />
       <div className="row wrap">
         <button className="btn primary big" onClick={onBlackBox}>
           ⬛ {tr.ui.openBlackBox}
@@ -280,6 +298,9 @@ export function End({
         </button>
         <button className="btn" onClick={onAgain}>
           🎲 {tr.ui.playAgain}
+        </button>
+        <button className="btn" onClick={onData}>
+          📊 {tr.data.open}
         </button>
       </div>
       {level === 'junior' && <p className="dim small">{tr.blackbox.intro}</p>}

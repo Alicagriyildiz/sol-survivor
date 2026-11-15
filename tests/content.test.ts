@@ -96,7 +96,8 @@ describe('content', () => {
       expect(tr.notes[sol], `note ${sol}`).toBeTruthy();
       const src = SOURCES.find((s) => s.sol === sol);
       expect(src?.source, `source ${sol}`).toBeTruthy();
-      expect(src?.verified).toBe(false);
+      // A note may only be marked verified with the official pages it was checked on.
+      if (src?.verified) expect(src.urls.length, `urls ${sol}`).toBeGreaterThan(0);
     }
   });
 

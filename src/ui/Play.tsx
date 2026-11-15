@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { SolarEventCard } from './DataViews';
 import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
 import { engine, fmt, tr } from '../content';
 import {
@@ -191,6 +192,7 @@ function StationPanel({
           <div key={fid} className="fault">
             <h3>⚠ {tr.faults[fid]!.title}</h3>
             <p>{tr.faults[fid]!.desc}</p>
+            {fid === 's12_spe' && <SolarEventCard s={s} />}
             <div className="options">
               {optionViews(engine, s, fid)
                 .filter((v) => !(sol1 && v.kind === 'defer'))

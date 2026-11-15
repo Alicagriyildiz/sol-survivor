@@ -1,51 +1,36 @@
-# Doğrulanacak kaynaklar
+# Kaynak notları ve doğrulama
 
-Oyundaki "Gerçekte ne oldu?" notlarının hepsi **doğrulanmadı** (`verified: false`).
-Not metinleri: `src/content/lang/tr.ts` → `notes`. Kaynak adları ve iddialar: `src/content/sources.ts`.
-Bir not doğrulanınca `sources.ts` içinde `verified: true` yapın; oyun "doğrulanacak" rozetini kaldırır.
+Oyundaki "Gerçekte ne oldu?" notları: metinler `src/content/lang/tr.ts` → `notes`, kaynak adları, iddialar ve adresler `src/content/sources.ts`.
+Oyun, `verified: false` olan notlarda "doğrulanacak" rozetini gösterir.
 
-Kural: emin olunmayan sayı ve tarih yazılmadı. Notlarda geçen tek sayısal ifadeler aşağıda işaretli.
+## Oturum 3 (2026-11-15): resmi sayfalardan doğrulama
 
-| Sol | Kaynak (oyunda gösterilen) | Doğrulanacak iddialar | Sayı/tarih |
+Kural: Bir not yalnızca içindeki **her** iddia resmi bir kurum sayfasında okunduysa `verified: true` yapıldı. Sayfaları bir yardımcı ajan açtı ve her biri için kısa bir alıntı getirdi. Metni değişen notların (6, 9, 13) ve sayısal değerlerin sayfalarını ayrıca kendim açtım (✔︎ işaretli).
+
+| Sol | Sonuç | Sayfa | Notta yapılan değişiklik |
 |---|---|---|---|
-| 1 | NASA – Mars Facts | Bir sol, Dünya gününden yaklaşık 40 dakika uzundur. | "yaklaşık 40 dakika" |
-| 2 | NASA – ISS Environmental Control and Life Support System (ECLSS) | ISS kullanılmış su ve nemi içme suyuna çevirir; bu sistemin parçaları arızalandı ve mürettebat onardı/değiştirdi. | — |
-| 3 | NASA/JPL – Phoenix Mars Lander | Phoenix 2008'de Mars toprağında perklorat buldu; perklorat insan için zararlıdır. | 2008 |
-| 4 | NASA/JPL – InSight Mission | Panellerin tozlanmasıyla güç azaldı; ekip robot kolun kepçesiyle panelin yanına kum döktü, rüzgarla sürüklenen kum biraz toz kaldırdı. | — |
-| 5 | NASA – MOXIE (Perseverance) | MOXIE Mars havasındaki CO2'den oksijen üretti; çok elektrik gerektirir. | — |
-| 6 | NASA – Human Research Program / space radiation | Yaşam alanlarını regolitle örtmek ve su gibi malzemelerle korumak radyasyon kalkanı olarak araştırılıyor. | — |
-| 7 | NASA – Mars communications / Deep Space Network | Dünya-Mars tek yön sinyal gecikmesi birkaç dakikadan yirmi dakikadan fazlasına kadar sürer. | "birkaç dakika… yirmi dakikadan fazla" |
-| 8 | NASA – 2018 Mars global dust storm | 2018'de başlayan bir toz fırtınası tüm gezegeni sardı. | 2018 |
-| 9 | NASA/JPL – Opportunity Rover | Opportunity 2018 fırtınasında bağlantıyı kaybetti; aylarca denendi, bir daha uyanmadı. | 2018 |
-| 10 | NASA – Apollo 13 | Komuta modülünün köşeli CO2 filtreleri ay modülündeki yuvarlak yuvaya uymadı; torba, karton ve bantla bağlantı parçası yapıldı. | 1970 |
-| 11 | NASA/JPL – Mars Exploration Rovers (Spirit, Opportunity) | Rüzgar zaman zaman panelleri temizledi ve güç arttı; zamanı önceden bilinemezdi. | — |
-| 12 | NASA – Curiosity RAD / MAVEN, September 2017 solar event | Eylül 2017'de bir güneş olayının parçacıkları Mars'a ulaştı; Curiosity'deki RAD yüzeyde artışı ölçtü. | Eylül 2017 |
-| 13 | NASA / Roscosmos – ISS 2020 leak, Soyuz MS-09 2018 | 2020'de ISS'te küçük sızıntının yeri süzülen çay yapraklarıyla bulundu; 2018'de bir Soyuz'daki küçük delik mürettebatça yamandı. | 2020, 2018 |
-| 14 | NASA – ISS External Active Thermal Control System | ISS amonyak soğutma pompaları arızalandı; değiştirmek için uzay yürüyüşleri yapıldı. | — |
-| 15 | NASA/JPL – Mars Entry, Descent and Landing | Mars'a iniş birkaç dakika sürer; sinyal gecikmesi yüzünden araç inişi kendi yönetir. | — |
+| 1 | ✅ | NASA GISS Mars24: ortalama güneş günü 24 sa 39 dk 35 sn (giss.nasa.gov/tools/mars24/help/notes.html) | Kaynak adı "NASA – Mars Facts" → "NASA GISS – Mars24" (Mars Facts sayfası "40 dakika" demiyor). |
+| 2 | ✅ | nasa.gov: su geri kazanım kilometre taşı + yaşam desteği dersleri | — |
+| 3 | ✅ | science.nasa.gov/mission/mars-phoenix (5 Ağustos 2008 duyurusu); jpl.nasa.gov Perseverance yazısı ("çok miktarda solunur ya da yutulursa") | "insan için zararlıdır" → "çok miktarda solunur ya da yutulursa zararlıdır". |
+| 4 | ✅ | jpl.nasa.gov "InSight gets a power boost" (2021) | — |
+| 5 | ✅ | nasa.gov MOXIE görev sonu; science.nasa.gov araç listesi ("Power: 300 watts") | "çok elektrik gerektirir" → "yaklaşık 300 vat harcıyordu". |
+| 6 | ✅ ✔︎ | NTRS 19910008686 (regolit kalkanı); NTRS 20170000379: "20 cm thick water shell … about 15% effective dose reduction" | Su için abartı önlendi: "20 cm su dozu yalnızca yaklaşık %15 azaltır". Kaynak adı NASA Teknik Raporlar Sunucusu oldu. |
+| 7 | ✅ | nasa.gov "Space communications: 7 things": yaklaşık 4 dk / yaklaşık 24 dk | "birkaç dakikadan yirmi dakikadan fazlasına" → "yaklaşık 4 dakikadan 24 dakikaya". |
+| 8 | ✅ | jpl.nasa.gov feature 7164 (Haziran 2018, "planet-encircling") | — |
+| 9 | ✅ ✔︎ | jpl.nasa.gov "Opportunity mission comes to end": 10 Haziran 2018, "more than a thousand commands", "eight-month recovery" | "Aylarca denendi" → "Sekiz ay boyunca binden fazla komut gönderildi". |
+| 10 | ✅ | nasa.gov Apollo 13 görev ayrıntıları | — |
+| 11 | ✅ | jpl.nasa.gov "Spirit gets energy boost…" (2009): yaklaşık 210 → 240 Wh | "Ne zaman olacağı önceden bilinemezdi" iddiası resmi sayfada bulunamadı, çıkarıldı. Yerine Spirit'in Wh değerleri kondu. |
+| 12 | ✅ | jpl.nasa.gov "Large solar storm … doubles radiation levels on the Martian surface" (29 Eylül 2017) | "Yüzeyde radyasyon RAD'ın o güne kadar ölçtüğünün iki katından fazlası" eklendi. |
+| 13 | ⚠️ kısmen, `verified: false` | nasa.gov ISS blog 30 Eylül 2020 (sızıntı Zvezda geçiş bölmesinde) ✔︎; ISS durum 30 Ağustos 2018 (Soyuz MS-09, yaklaşık 2 mm delik, reçine + gazlı bez) ✔︎ | **Çay yaprakları** hiçbir resmi NASA/Roscosmos sayfasında bulunamadı; yalnızca Roscosmos'a dayanan haberlerde geçiyor. Not "haberlere yansıdı" diye yeniden yazıldı, rozet kalıyor. |
+| 14 | ✅ | nasa.gov Aralık 2013 amonyak pompası uzay yürüyüşleri | Yıl eklendi (2013). |
+| 15 | ✅ | science.nasa.gov "Curiosity's seven minutes of terror": yaklaşık 7 dk, sinyal yaklaşık 14 dk | "birkaç dakika" → "yaklaşık 7 dakika", sinyal süresi eklendi. |
 
-## Diğer içerik notları (doğrulama gerekmez ama bilinmeli)
-- Oyundaki sayılar (güç, doz birimi, süreler) **oyun sayılarıdır**, gerçek ölçüm değildir. Oyun bunu "canlı veri" gibi sunmaz.
-- Oyunda "NASA onaylı", "canlı veri", "ilk" gibi ifadeler yoktur; eklenmemeli.
+Tam adresler `src/content/sources.ts` → `urls` içinde. Oyun bunları kaynak adına bağlantı olarak gösteriyor.
 
-## Oturum 2 denetimi (2026-11-15) — notların sol olayıyla ilgisi
+## Oyunda kullanılan sayılar (oyun tasarımı mı, veri mi?)
+- Güç, Yaşam Desteği, Kalkan puanları, onarım süreleri ve bedeller **oyun tasarımıdır**. Veriler ekranı bunu söyler.
+- Güneş olayı, doz birimi, ISS karşılaştırması, fırtına değerleri ve OSDR çalışmaları gerçek veridir. Kaynakları `docs/DATA.md`'de.
+- Oyunda "NASA onaylı", "canlı veri", "gerçek zamanlı", "ilk" gibi ifadeler yoktur; eklenmemeli.
 
-İnternetten doğrulama yapılmadı; aşağıdakiler yalnızca **notun o solün olayıyla ilgili olup olmadığı** ve hafızadaki bilgiyle **çelişip çelişmediği** kontrolüdür. Hiçbir not `verified: true` yapılmadı. Notlarda bu oturumda değişiklik yapılmadı.
-
-| Sol | İlgili mi? | Şüphe / dikkat |
-|---|---|---|
-| 1 | Evet (öğretici sol'ü anlatıyor). | "yaklaşık 40 dakika" hafızadaki ~39-40 dk ile uyumlu; kaynakla doğrulanmalı. |
-| 2 | Evet (su geri kazanım ünitesi). | Genel ifade; belirli bir arıza tarihi verilmiyor, iyi. |
-| 3 | Evet (perklorat). | — |
-| 4 | Evet; "kum serp" seçeneği doğrudan bu olaydan. | **Dikkat:** Kumu dökme işinin yılı ve kazanılan güç miktarı notta yok, eklenmemeli; olay kaynakla doğrulanmalı. |
-| 5 | Evet (oksijen üreteci). | "çok elektrik" niteliksel; sayı yok. |
-| 6 | Kısmen: gerçek bir olay değil, araştırma konusu. Not bunu doğru söylüyor ("araştırıyor"). | — |
-| 7 | Evet (gecikmeli talimat). | Gecikme aralığı ("birkaç dakika… yirmi dakikadan fazla") doğrulanmalı. |
-| 8 | Evet. | — |
-| 9 | Evet (fırtınada güç kaybı). | "Aylarca denendi" doğrulanmalı. |
-| 10 | Evet; "bant ve torba" seçeneği doğrudan bu olaydan. | Notta "karton" var, oyunda seçenek "bant, torba ve hortum": çelişki değil ama hortum notta yok. |
-| 11 | Evet (rüzgarın paneli temizlemesi). | — |
-| 12 | Evet. | **Şüpheli ayrıntı:** olayın tam tarihi (Eylül 2017) ve RAD'ın ölçtüğü artış kaynakla doğrulanmalı. |
-| 13 | Evet; "çay yaprağı" seçeneği doğrudan bu olaydan. | **Şüpheli ayrıntı:** 2020 sızıntısında kullanılanın "çay yaprakları" mı yoksa çay poşeti mi olduğu ve sızıntının hangi modülde olduğu kaynakla doğrulanmalı. Soyuz MS-09 deliğinin yamanma biçimi notta genel tutuldu, iyi. |
-| 14 | Evet (pompa varyantı). Radyatör varyantı için not doğrudan ilgili değil ama aynı soğutma sistemini anlatıyor. | — |
-| 15 | Evet (iniş). | "İniş birkaç dakika sürer" doğrulanmalı. Oyundaki fener/yansıtıcı kurgudur; not bunu gerçek gibi sunmuyor, iyi. |
+## Oturum 2 denetimi (geçmiş)
+Oturum 2'de notların sol olayıyla ilgisi denetlendi (hepsi ilgili). İşaretlenen şüpheli ayrıntılar (Sol 4 kum numarası, Sol 7 gecikme aralığı, Sol 9 "aylarca", Sol 12 tarih ve ölçüm, Sol 13 çay yaprağı ve modül, Sol 15 süre) yukarıdaki tabloda sonuçlandı.

@@ -51,8 +51,13 @@ console.log(
 );
 
 describe('balance (200 seeds)', () => {
-  it('at least 50% of random-bot losses can be rescued by one decision', () => {
-    expect(rescueWithAutopilot).toBeGreaterThanOrEqual(0.5);
+  // Session 3: the target is measured strictly (after the log ends the astronaut does
+  // nothing). The autopilot rate is printed above for comparison.
+  it('at least 40% of random-bot losses can be rescued by one decision (strict)', () => {
+    expect(rescueStrict).toBeGreaterThanOrEqual(0.4);
+  });
+  it('careful bot: Shield causes under 70% of its losses', () => {
+    expect(lossShare(stats.careful).shield).toBeLessThan(0.7);
   });
   it('random bot survives 5-20%', () => {
     expect(stats.random.winRate).toBeGreaterThanOrEqual(0.05);

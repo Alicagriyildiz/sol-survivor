@@ -154,11 +154,23 @@ export function stateValue(s: GameState): number {
 }
 
 /** What the player can see before choosing: the option's immediate effect on the gauges
- *  and the hours it costs. Delayed effects are only known through the hint tags. */
+ *  and the hours it costs. Delayed effects are only known through the hint tags.
+ *  Like the UI preview (selectors.previewParts), an emergency reserve that the option
+ *  would trigger is NOT counted as a gain: the card shows it as a separate warning
+ *  ("this reserve is used only once"), so a careful player avoids burning it. */
 function lookahead(s: GameState, engine: Engine, a: Action): number {
   const after = engine.step(s, a);
-  return stateValue(after) + after.hoursLeft * HOUR_VALUE;
+  let v = stateValue(after) + after.hoursLeft * HOUR_VALUE;
+  const rv = s.config.rules.reserve;
+  for (const r of after.reservesUsed) {
+    if (s.reservesUsed.includes(r)) continue;
+    const without = Math.max(0, after.res[r] - rv.amount);
+    v -= Math.min(after.res[r], 60) - Math.min(without, 60) + RESERVE_SPENT;
+  }
+  return v;
 }
+/** How much a careful player dislikes spending a one-time reserve. */
+const RESERVE_SPENT = 5;
 const HOUR_VALUE = 1.5;
 
 export const carefulBot: Policy = (s, engine) => {

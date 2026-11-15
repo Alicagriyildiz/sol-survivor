@@ -11,8 +11,8 @@ export interface Tuning {
 }
 
 export const TUNING: Tuning = {
-  cost: { defer: 0.5, quick: 0.7, robust: 1.2, creative: 1 },
-  routineGain: 0.5,
+  cost: { defer: 0.3, quick: 0.8, robust: 1.8, creative: 1 },
+  routineGain: 0.3,
 };
 
 const roundHalf = (v: number) => Math.round(v * 2) / 2;

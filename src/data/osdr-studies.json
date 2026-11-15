@@ -1,0 +1,67 @@
+{
+  "source": "NASA Open Science Data Repository (OSDR) study search API",
+  "attribution": "Data: NASA Open Science Data Repository. https://osdr.nasa.gov/",
+  "endpoint": "https://osdr.nasa.gov/osdr/data/search",
+  "requests": [
+    "https://osdr.nasa.gov/osdr/data/search?term=microbial%20observatory&type=cgene&size=25",
+    "https://osdr.nasa.gov/osdr/data/search?term=plant%20growth&type=cgene&size=25",
+    "https://osdr.nasa.gov/osdr/data/search?term=bone%20loss&type=cgene&size=25",
+    "https://osdr.nasa.gov/osdr/data/search?term=space%20radiation&type=cgene&size=25"
+  ],
+  "query": "type=cgene, one search term per topic; first hit whose title matches the topic pattern in scripts/fetch-data.mjs",
+  "downloadedAt": "2026-11-15",
+  "studies": [
+    {
+      "sol": 2,
+      "topic": "microbes in ISS water and surfaces",
+      "searchTerm": "microbial observatory",
+      "accession": "OSD-252",
+      "title": "International Space Station - Microbial Observatory of Pathogenic Virus, Bacteria, and Fungi project",
+      "projectType": "Spaceflight Study",
+      "flightProgram": "International Space Station (ISS)",
+      "mission": "SpaceX-11",
+      "organism": "Microbiota",
+      "description": "This study investigated the interplay between the microbial community of the International Space Station and its crew. Environmental samples were collected from 8 habitable locations around the ISS. The microbial composition was measured using shotgun metagenomic sequencing and procesed using the Livermore Metagenomics Analysis Toolkit.",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-252"
+    },
+    {
+      "sol": 3,
+      "topic": "growing food plants in space",
+      "searchTerm": "plant growth",
+      "accession": "OSD-772",
+      "title": "PH-04 Chile Peppers in Space",
+      "projectType": "Spaceflight Study",
+      "flightProgram": "International Space Station (ISS)",
+      "mission": "SpaceX-22",
+      "organism": "Microbiota",
+      "description": "Growing plants in spaceflight presents challenges to achieve optimal plant growth and productivity. One of NASA's goals is growing edible crops in spaceflight to supplement the astronauts' diet with fresh vegetables and assess food safety of the crops. It is important to understand the optimal growing conditions for crops grown in spaceflight conditions. Leafy greens have been grown on the International Space Station in the Veggie plant chamber and were safe for the astronauts to eat. The Advanced Plant Habitat (APH), an enclosed, controlled plant growth facility on the ISS has also been used ",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-772"
+    },
+    {
+      "sol": 9,
+      "topic": "bone and muscle loss in spaceflight",
+      "searchTerm": "bone loss",
+      "accession": "OSD-342",
+      "title": "Targeting myostatin/activin A protects against skeletal muscle and bone loss during spaceflight [plasma proteomics]",
+      "projectType": "Spaceflight Study",
+      "flightProgram": "International Space Station (ISS)",
+      "mission": "SpaceX-19",
+      "organism": "Mus musculus",
+      "description": "Among the physiological consequences of extended spaceflight are loss of skeletal muscle and bone mass. One signaling pathway that plays an important role in maintaining muscle and bone homeostasis is that regulated by the secreted signaling proteins, myostatin (MSTN) and activin A. Here, we used both genetic and pharmacological approaches to investigate the effect of targeting MSTN/activin A signaling in mice that were sent to the International Space Station. Wild type mice lost significant muscle and bone mass during the 33 d spent in microgravity. Muscle weights of Mstn -/- mice, which are ",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-342"
+    },
+    {
+      "sol": 12,
+      "topic": "radiation and living cells",
+      "searchTerm": "space radiation",
+      "accession": "OSD-210",
+      "title": "Approaches for Surveying Cosmic Radiation Damage in Large Populations of Arabidopsis thaliana Seeds- an Antarctic Example",
+      "projectType": "Suborbital Flight Study",
+      "flightProgram": "Cosmic Ray Exposure Sequencing Science (CRESS)",
+      "mission": "",
+      "organism": "Arabidopsis thaliana",
+      "description": "The Cosmic Ray Exposure Sequencing Science (CRESS) payload system is a proof of concept experiment to assess the genomic impact of space radiation on seeds. CRESS was designed as a secondary payload for the December 2016 high-altitude high-latitude and long-duration balloon flight carrying the Boron And Carbon Cosmic Rays in the Upper Stratosphere (BACCUS) experimental hardware. Investigation of the biological effects of Galactic Cosmic Radiation (GCR) particularly those of ions with High-Z and Energy (HZE) is of interest due to the genomic damage this type of radiation inflicts. The biologica",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-210"
+    }
+  ]
+}

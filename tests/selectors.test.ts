@@ -66,7 +66,8 @@ describe('previews', () => {
 
   it('reports health lost to hours spent at critical levels', () => {
     const s0 = start();
-    const s: GameState = { ...s0, res: { ...s0.res, power: 20 } };
+    // Reserve already used, so the gauge stays below the critical line.
+    const s: GameState = { ...s0, res: { ...s0.res, power: 20 }, reservesUsed: ['power'] };
     const p = previewParts(engine, s, { type: 'resolve', faultId: 's1_wakeup', optionId: 'stepByStep' });
     expect(p.critHealth).toBeLessThan(0);
   });

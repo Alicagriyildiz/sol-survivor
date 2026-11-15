@@ -12,7 +12,7 @@ Tek astronot, Mars üssü, 15 sol. Sol 15'te ikmal aracı iner; o günün sonund
 | Yaşam Desteği (`life`) | 0-100 | Hava + su + gıda tek gösterge. |
 | Kalkan (`shield`) | 0-100 | Radyasyon korunması. |
 | Sağlık (`health`) | 0-100 | 0 olursa görev biter. |
-| Doz (`dose`) | 0-∞ | Birikimli radyasyon; sadece artar. Puanı düşürür. Sağlığa etkisi radyasyon olayları üzerinden. |
+| Doz (`dose`) | 0-∞ | Birikimli radyasyon; sadece artar. Puanı düşürür. Sağlığa etkisi radyasyon olayları üzerinden. Arayüzde mGy olarak gösterilir (birim Curiosity RAD'a bağlı, §8). |
 | Mesai (`hoursLeft`) | 10 sa/sol | Her iş ve yürüyüş saat harcar. |
 
 ### Sol akışı
@@ -28,10 +28,13 @@ Kaynak `critical` (25) altındaysa her saat: `maxDamagePerHour × (25 − değer
 Her Sağlık kaybı üç nedenden birine yazılır (güç = soğuk/karanlık, yaşam = hava/su/gıda, kalkan = radyasyon). Kayıp nedeni = görev boyunca en çok Sağlık götüren neden.
 
 ### Acil yedek (toparlama şansı)
-Her kaynak için **bir kez**: kaynak ilk kez 10'un altına düşünce +35 eklenir ve oyuncuya söylenir. Çocuk hatasını görür ve toparlanma şansı bulur. (Denge için kritik: bkz. §6.)
+Her kaynak için **bir kez**: kaynak ilk kez **kritik eşiğin (25) altına** düşünce +52 eklenir ve oyuncuya söylenir. Çocuk hatasını görür ve toparlanma şansı bulur. (Denge için kritik: bkz. §6.)
+
+**Oturum 3 kural değişikliği:** eskiden yedek 10'un altında devreye giriyordu, Sağlık ise 25'in altında azalmaya başlıyordu. Arada kalan 10-25 bandında Sağlık sessizce eriyordu; dikkatli botun kayıplarının %88'i buradan (Kalkan) geliyordu. Artık yedek eşiği kritik eşiğin kendisidir (`config.ts`: `reserve.threshold = CRITICAL`, testle bağlı). Bedeli: yedek daha erken ve daha sık tetiklenir, bu yüzden *zamanlaması* önemlidir. Yedeği erken harcayan oyuncunun fırtınada yedeği kalmayabilir (§6).
 
 ### Radyasyon
 `radiation(x)` etkisi: alınan = `x × (1 − 0.7 × Kalkan/100)`; doz += alınan; Sağlık −= alınan × 0.6 (neden: kalkan). Her gece arka plan radyasyonu 2. EVA her dışarı çıkışta 3.
+Doz sayacı: 1 oyun birimi = 0,21 mGy ÷ 2. Yani bir gecenin Kalkan'dan önceki arka plan radyasyonu, Curiosity RAD'ın ölçtüğü bir Mars günü kadardır. Yalnızca birim veriye bağlıdır; Kalkan, EVA ve güneş olayı miktarları oyun ölçeğidir.
 
 ### Yürüme, EVA, kilitler
 - İstasyon yürüme süreleri (ana koridordan): Ana üs 0, Sera 0.5, Sığınak 0.5, Batarya 0.5, Hava kilidi 0, Güneş paneli (EVA) 1, İniş alanı (EVA) 1.
@@ -47,7 +50,7 @@ Her kaynak için bir iş, her biri sol başına bir kez: Sera "Bitkilere bak" (Y
 Yama kiti 1, yedek filtre 1, bant 2 (`MissionConfig.inventory`). Harcanan parça geri gelmez.
 
 ### Tohum ve tekrar oynanabilirlik
-Tüm rastgelelik `init` anında, tohumdan (mulberry32) çekilen **zarlarla** yapılır (`rolls`). Sonrası tamamen deterministiktir; aynı tohum + aynı eylemler = bit bit aynı durum. Zarlar: Sol 2 varyantı (pompa/filtre), toz seviyesi (0-2), Sol 5 oksijen açığı (0-2), fırtına darbesi (0-5), fırtına süresi (1-4 gece), rüzgar panelleri temizler mi (0/1), güneş olayı büyüklüğü (0-3), Sol 13 sızıntı yeri (hava kilidi/sera) ve büyüklüğü (0-2), Sol 14 varyantı (pompa/radyatör).
+Tüm rastgelelik `init` anında, tohumdan (mulberry32) çekilen **zarlarla** yapılır (`rolls`). Sonrası tamamen deterministiktir; aynı tohum + aynı eylemler = bit bit aynı durum. Zarlar: Sol 2 varyantı (pompa/filtre), toz seviyesi (0-2), Sol 5 oksijen açığı (0-2), fırtına darbesi (0-5), fırtına süresi (1-4 gece), rüzgar panelleri temizler mi (0/1), **gerçek güneş olayı (`speEvent`, 0-4: DONKI'den seçilen 5 olaydan hangisi)**, Sol 13 sızıntı yeri (hava kilidi/sera) ve büyüklüğü (0-2), Sol 14 varyantı (pompa/radyatör).
 
 ### Seviyeler (sunum katmanı; çekirdek aynı)
 - `junior` (varsayılan): 3 kaynak çubuğu + Sağlık, durum ışığı + simge + kelime ("İyi/Azalıyor/Tehlike/Bitti"), seçeneklerde "neden" metni, yatırım/sonra-pahalı ipucu etiketleri, anlık etki okları (▲▼).
@@ -69,16 +72,16 @@ Tüm rastgelelik `init` anında, tohumdan (mulberry32) çekilen **zarlarla** yap
 | 3 | Perklorat (Phoenix 2008) | Toprağı yıka (su+güç, bahçe her gece Yaşam verir) / topraksız tepsi (pompa her gece Güç yer, daha iyi bahçe) / dayanıklı bitkiler (az ürün) / ertele (2 gün sonra yiyecek açığı). `soilClean`. |
 | 4 | Panelde toz (InSight) | EVA ile fırçala / kum dök numarası (az toz kalır, `panelsTilted`) / ışıkları kıs / ertele (toz fırtınaya kadar kalır). |
 | 5 | Oksijen üreteci (MOXIE) | Tam güç (çok Güç, çok Yaşam) / gece yarı güç / bitkilere güven (toprak temizse iyi) / ertele. |
-| 6 | Sığınağı güçlendir | Regolit (5 sa, `shelterReinforced`) / su bidonları (`shelterWater`) / ertele (duvar çatlar). |
+| 6 | Sığınağı güçlendir | Regolit (4 sa, `shelterReinforced`, kalın duvar 9 gece daha az aşınır) / su bidonları (`shelterWater`) / ertele (duvar çatlar). |
 | 7 | Gecikmeli Dünya talimatı | Talimata uy (`beaconReserve`) / kendi kararın (Yaşam'ı koru) / yarısını uygula + rapor (`sentReport`) / ertele (ertesi sabah 2 sa mesai kaybı). |
-| 8 | Fırtına uyarısı (2018) | Bataryaları tam doldur (`stormPrepped`) / yarısı / ertele. Panelleri sabitle EVA (`panelsSecured`) / kabloları içeri al (`panelsHalf`) / ertele. Gece fırtına başlar. |
-| 9 | Fırtına, güç çöküşü (Opportunity) | Sabah: darbe (hazırlıklıysa küçük), 1-4 gece fırtına tüketimi, EVA kilitli. Yük atma: sera lambaları (bahçe ölür) / ısıtıcıyı kıs (Sağlık) / sığınak ısıtıcısı (Kalkan) / hiçbirini kapatma (gece Güç gider). |
+| 8 | Fırtına uyarısı (2018) | Bataryaları tam doldur (`stormPrepped`) / yarısı / ertele. Panelleri sabitle EVA, 2 sa (`panelsSecured`) / kabloları içeri al (`panelsHalf`) / ertele. İki sağlam iş her iki sırada da mesaiye sığar (9 ve 9,5 sa). Gece fırtına başlar. |
+| 9 | Fırtına, güç çöküşü (Opportunity) | Sabah: darbe (hazırlıklıysa küçük), 1-4 gece fırtına tüketimi (paneller hiç üretmez: 2018 tau değerlerinden, §8), EVA kilitli. Yük atma: sera lambaları (bahçe ölür) / ısıtıcıyı kıs (Sağlık) / sığınak ısıtıcısı (Kalkan) / hiçbirini kapatma (gece Güç gider). |
 | 10 | CO2 filtresi uymuyor (Apollo 13) | Yuvayı yeniden yap (yedek filtre) / bant+torba (2 bant) / silkele (ertesi gece yine dolar) / ertele (yeniden açılır). |
 | 11 | Fırtına sonrası paneller | EVA fırçala / yarısını temizle / rüzgarı bekle (kumar: `windCleans` zarı ya da `panelsTilted` → ertesi sabah temizlenir). |
-| 12 | Güneş parçacık olayı (Curiosity RAD, Eylül 2017) | Sığınakta kal 6 sa / kısa kal 3 sa / su bidonlu köşe / çalışmaya devam. Alınan radyasyon `shelterReinforced` > `shelterWater` > hiçbiri. |
+| 12 | Güneş parçacık olayı (**gerçek DONKI olayı**, tohuma göre 5 olaydan biri) | Sabah: Kalkan −3·s. Sığınakta kal 6 sa / kısa kal 3 sa / su bidonlu köşe / çalışmaya devam. Ham radyasyon 16 + 24·s; alınan `shelterReinforced` > `shelterWater` > hiçbiri. s = olayın X-ışını sınıfından güç (§8). |
 | 13 | Mikro sızıntı (ISS 2020 çay yaprakları; Soyuz 2018) — varyant: hava kilidi/sera, 3 boy | Yama kiti / çay yaprağı + bant / bölmeyi kapat / ertele (yeniden açılır). İniş alanı (yeni açıldı): kayaları temizle EVA (`padClear`) / işaret koy (`padMarked`) / ertele. |
 | 14 | Soğutma arızası (ISS amonyak pompaları) — varyant: pompa/radyatör | Değiştir/temizle / su ünitesinin pompasını ödünç al (sadece `recyclerServiced`) / bataryaların yarısını kapat / ertele. Sabah: su ünitesi bakımsızsa ek Yaşam kaybı. "Pompayı ödünç al" ve "yarısını kapat" her iki varyantta da içeride, Batarya istasyonunda yapılır (radyatör varyantında da EVA gerekmez). |
-| 15 | İkmal inişi | Fener tam güç (`beaconReserve` varsa ucuz) / kısık fener (`sentReport` ya da `padClear` varsa yakına iner) / EVA ile yansıtıcı / feneri yakma (çok uzağa iner). |
+| 15 | İkmal inişi | Fener tam güç (`beaconReserve` varsa ucuz; alan temizse +5, işaretliyse +3 Yaşam: ilk malzeme hemen gelir) / kısık fener (`sentReport` ya da `padClear` varsa yakına iner) / EVA ile yansıtıcı / feneri yakma (çok uzağa iner). |
 
 **Zorunlu zincirler** (hepsi kurulu):
 - 2 → 14: `recyclerServiced` → Sol 14'te "pompayı ödünç al" açılır; yoksa Sol 14 sabahı ek Yaşam kaybı.
@@ -109,15 +112,19 @@ Her seçenekte çocuk dilinde "neden" metni var (`tr.faults[*].options[*].why`):
 - **cheapest**: her arızada anlık maliyeti (saat + kaynak kaybı + parça) en düşük seçeneği seçer (çoğu zaman ertele); boş saatte en zayıf kaynağın bakımını yapar.
 - **robust**: her zaman "sağlam" türü seçer (yoksa yaratıcı, hızlı, ertele sırasıyla); boş saatte en zayıf kaynağın bakımı.
 - **careful**: arayüzün junior oyuncuya gösterdiğini okur: seçeneğin **anlık** etkisi + mesai + ipucu etiketleri (yatırım +, sonra-pahalı −). Gizli bilgiyi (zarlar, gecikmeli etkilerin sayısı) görmez. Boş saatte en zayıf kaynağın bakımı. Kara Kutu otomatik pilotu da budur.
+  - Oturum 3 düzeltmesi: önizleme, tetiklenecek acil yedeği **kazanç saymaz** (−5 puan da "bir kez kullanılır" bedeli). Arayüz Oturum 2'den beri yedeği kazanç olarak değil, ayrı bir uyarı olarak gösteriyor; bot bununla tutarsızdı ve yedeği bilerek harcıyordu.
 
 ## 6. Denge ve ayar
-Denge botlarla ölçülür (`tests/balance.test.ts`, 1-200 tohum). Ayar düğmeleri: `content/config.ts` (gece tüketimi, kritik hasar hızı, iyileşme, acil yedek) ve `content/tuning.ts` (seçenek türüne göre maliyet çarpanı: ertele 0.5, hızlı 0.7, sağlam 1.2, yaratıcı 1; rutin kazancı 0.5). Radyasyon fiziksel olay sayılır, çarpanla ölçeklenmez. Arama araçları: `tests/tools/search.test.ts`, `tests/tools/trace.test.ts` (ortam değişkeni yoksa hiçbir şey yapmaz).
+Denge botlarla ölçülür (`tests/balance.test.ts`, 1-200 tohum). Ayar düğmeleri: `content/config.ts` (gece tüketimi P/Y/K −5,75 / −8,25 / −4; kritik hasar 1,1/sa; gece iyileşmesi 10, rahat eşiği 25; acil yedek 25'te +52) ve `content/tuning.ts` (seçenek türüne göre maliyet çarpanı: ertele 0,3, hızlı 0,8, sağlam 1,8, yaratıcı 1; rutin kazancı 0,3). Oturum 3 değerleri; öncekiler `docs/PROGRESS.md`. Radyasyon fiziksel olay sayılır, çarpanla ölçeklenmez. Arama araçları: `tests/tools/search.test.ts`, `tests/tools/trace.test.ts` (ortam değişkeni yoksa hiçbir şey yapmaz).
 
 Ayar sırasında öğrenilenler (sonraki oturum için):
 - Dikkatli botun sonucu tohuma çok az bağlıydı; tek düğme (ör. gece tüketimi −6 → −7) onu %99'dan %6'ya atıyordu. Şans payını büyütmek için zar aralıkları genişletildi.
 - 5 rutin varken (dinlen, EVA ile fırçala dahil) rastgele botun bakım işlerinin çoğu boşa gidiyordu; rutinler kaynak başına bire indirildi.
 - Rastgele bot ile dikkatli bot arasındaki uçurumu kapatan asıl mekanik **acil yedek** oldu.
 - Kurtarma oranını en çok "rahat" eşiği (gece iyileşmesi için) etkiledi: tek bir kaynağı eşiğin üstüne çıkaran tek karar her gece iyileşmeyi açıyor.
+- Oturum 3: yedek eşiği 25'e çekilince eski %50 kurtarma oranının bir kısmının **kusurun kendisinden** geldiği görüldü (tek bir karar kaynağı 10'un altına itip +35 yedeği tetikleyince büyük bir salınım oluyordu). Katı kurtarma ≥ %40 ancak büyük yedekle (≈50) ve güçlü gece iyileşmesiyle (≈10) tutuyor.
+- Büyük yedek, kaynağı erken 25'in altına düşürmeyi ödüllendirir. Bu yüzden Sol 6 sığınak yatırımı (regolit, su) dikkatli botta ertelemekten **daha kötü** çıkıyor: regolitin Güç bedeli bazı tohumlarda Güç yedeğini Sol 6'da harcatıyor, fırtınada yedek kalmıyor. Sol 6 dengeli olan ayarlarda (yedek 20-30) katı kurtarma %20-32'ye düşüyor. Ödünleşim `docs/PROGRESS.md` oturum 3'te.
+- Arama araçları: `tests/tools/search.test.ts` artık `RESCUE=1` ile iki kurtarma ölçüsünü, `FORCE='[["s6_shelter","regolith"],...]'` ile seçenek zorlamayı yazar; `tests/tools/picks.test.ts` (`PICKS=1`) botların seçenek dağılımı.
 
 ## 6b. Arayüz kuralları (Oturum 2, oyun testinden sonra)
 - **Görev satırı** (`selectors.mission`): açık sorun varsa, bugün sağlam/hızlı/yaratıcı bir seçeneği mesaiye sığan sorunlardan, oyuncunun bulunduğu istasyondaki önce, yoksa listedeki ilk sorun gösterilir. Hiçbiri sığmıyorsa "mesain yetmiyor, günü bitirirsen ertelenir". Sorun yoksa "işin bitti" ve bakım yapılabilir mi bilgisi.
@@ -138,13 +145,22 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - Gün sonunda açık kalan arızalar kendiliğinden ertelenir; bu da Kara Kutu'da bir karar olarak görünür.
 - Görev Sol 15'in gün sonunda biter; son gece işlenmez.
 - Kayıp nedeni = görev boyunca en çok Sağlık götüren kaynak. Soğuk → Güç, radyasyon → Kalkan.
-- Doz birimi soyut (gerçek mSv değeri kullanılmadı, uydurmamak için). Dozun ölümcül eşiği yok; puanı düşürür.
+- Doz arayüzde mGy (soğurulan doz). Birimin dayanağı Curiosity RAD'ın yayımlanmış yüzey değeri (≈210 µGy/gün). Sievert kullanılmadı, çünkü RadLab ve RAD'ın karşılaştırılabilir değeri soğurulan doz. Dozun ölümcül eşiği yok; puanı düşürür.
 - Dünya-Mars gecikmesi sayıyla simüle edilmedi; Sol 7 talimatı hikâyede "durum değişti" olarak işlenir.
 - "Dinlen" ve "EVA ile panel fırçala" bakım işleri denge için çıkarıldı (bkz. §6).
-- Acil yedek: kaynak başına bir kez, 10'un altına inince +35. Gece iyileşmesi: tüm kaynaklar ≥ 20 ise +4.
+- Acil yedek: kaynak başına bir kez, kritik eşiğin (25) altına inince +52. Gece iyileşmesi: tüm kaynaklar ≥ 25 ise +10.
 - Rastgele bot tanımı §5'teki gibidir (%15 erken bitirme dahil); hedefler bu tanıma göre ölçüldü.
 - Kara Kutu'da alternatif, ancak orijinal gidişatta o an yapılabilir idiyse seçilebilir.
 - Otomatik pilot, kayıt bittikten sonra dikkatli bottur. Kurtarma oranı ayrıca "kayıt bitince astronot hiçbir şey yapmaz" kuralıyla da ölçülüp raporlanır.
 - Arayüzde rastgele görev numarası `Math.random` ile seçilir (yalnız arayüz; çekirdek değil).
 - Puan = kazanırsa 1000 + Sağlık×5 + kaynak toplamı − doz×2 + sol×20 (sadece gösterim).
 - Tüm metinler şimdilik yalnızca Türkçe (`lang/tr.ts`); İngilizce aynı şekille eklenebilir.
+
+## 8. Gerçek veri bağlantıları (Oturum 3)
+Ayrıntı ve kaynaklar: `docs/DATA.md` (İngilizce, jüri için). Kod: `src/content/data.ts` (saf), anlık görüntüler `src/data/`, indirme `scripts/fetch-data.mjs`.
+- Çekirdek veriyi bilmez. Senaryo (`scenario.ts`), olay başına `{roll: speEvent, eq: i}` koşullu etkiler üretir; değerler `data.ts`'teki ölçek fonksiyonlarından gelir. Aynı tohum aynı olayı verir; Kara Kutu'nun karşı-olgusal tekrarı da aynı olayı yaşar (testli).
+- Ölçekler: güç `s = log10(akı / 1e-6)`; Kalkan kaybı `3·s`; ham radyasyon `16 + 24·s`. Daha güçlü olay her zaman daha çok zorlar (testli). Fırtına paneli `verim(tau)` doğrusal, 0,5 → 1 ve 2,0 → 0; tau 10,8'de 0.
+- Uzay havası satırı (brifing): Sol 1-5 sakin, 6-8 "aktif bölge izleniyor", 9-11 "Sol 12'de olay bekleniyor, tahmini gücü: …", 12 "bugün: {sınıf}", 13+ "geçti". Varsayım: çocuk Sol 6 kararını olayın gücünü bilmeden verir (gerçek tahmin de bir hafta öncesini bilemez); gücü Sol 9'dan itibaren söylenir.
+- Veriler ekranı başlangıçtan ve görev sonundan açılır; her satırda veri, kaynak (bağlantı), tarih, oyunda neyi etkilediği. Elle girilen değerler "NASA'nın yayımladığı değerlere göre ayarlandı (veri seti değil)" etiketi taşır.
+- Dış bağlantılar (DONKI kaydı, OSDR çalışması, kaynak sayfası) yalnızca oyuncu tıklarsa açılır; oyun kendisi ağa çıkmaz.
+

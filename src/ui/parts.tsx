@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { engine, fmt, tr } from '../content';
+import { DEFAULT_CONFIG, data, engine, fmt, tr } from '../content';
 import { criticalResources, healthStatus, previewParts, resourceStatus, type Status } from '../sim/selectors';
 import { RESOURCES, type Action, type Deltas, type GameState, type ResourceId, type SolSnapshot } from '../sim/types';
 import { colors, resourceIcon, statusColor, statusIcon } from './tokens';
@@ -8,6 +8,11 @@ export type Level = 'junior' | 'commander';
 
 export const fmtNum = (n: number, digits = 1) =>
   (Math.round(n * 10 ** digits) / 10 ** digits).toLocaleString('tr-TR', { maximumFractionDigits: digits });
+/** '2017-09-10' -> '10 Eylül 2017' (no Date object needed). */
+export const fmtDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${tr.months[(m ?? 1) - 1]} ${y}`;
+};
 export const fmtHours = (h: number) => `${fmtNum(h)} ${tr.ui.hoursUnit}`;
 
 /** Arrows for one value change: ▲ / ▼, more arrows for bigger changes. */
@@ -99,11 +104,7 @@ export function TopBar({
           <span aria-hidden>{resourceIcon.hours}</span> {tr.ui.hoursLeft}: <strong>{fmt(tr.ui.hoursOf, { left: fmtNum(s.hoursLeft) })}</strong>
         </div>
         <HoursStrip left={s.hoursLeft} total={s.config.hoursPerSol} />
-        {level === 'commander' && (
-          <div className="hours">
-            <span aria-hidden>{resourceIcon.dose}</span> {tr.res.dose}: <strong>{fmtNum(s.dose, 0)}</strong>
-          </div>
-        )}
+        <DoseMeter dose={s.dose} />
       </div>
       <div className={`bars ${coach === 'bars' ? 'coach-target' : ''}`}>
         {RESOURCES.map((r) => (
@@ -152,6 +153,30 @@ export function Warnings({ s }: { s: GameState }) {
   );
 }
 
+/** Dose in mGy (unit anchored to Curiosity RAD, see content/data.ts). */
+export const mGy = (dose: number) => data.doseMGy(dose, DEFAULT_CONFIG.rules);
+export const fmtMGy = (dose: number) => `${fmtNum(mGy(dose), 2)} ${tr.doseInfo.unit}`;
+
+/** Dose meter with an info button that names its sources. */
+export function DoseMeter({ dose }: { dose: number }) {
+  return (
+    <details className="dose-meter">
+      <summary>
+        <span aria-hidden>{resourceIcon.dose}</span> {tr.res.dose}: <strong>{fmtMGy(dose)}</strong>{' '}
+        <span className="info-btn" aria-label={tr.doseInfo.button} title={tr.doseInfo.button}>
+          ⓘ
+        </span>
+      </summary>
+      <div className="popover small">
+        <strong>{tr.doseInfo.title}</strong>
+        <p>{fmt(tr.doseInfo.body, { mars: fmtNum(data.MARS_SURFACE_MGY_PER_DAY, 2) })}</p>
+        <p>{fmt(tr.doseInfo.iss, { iss: fmtNum(data.ISS_MGY_PER_DAY, 2) })}</p>
+        <p className="dim">{tr.doseInfo.source}</p>
+      </div>
+    </details>
+  );
+}
+
 const KEYS = ['power', 'life', 'shield', 'health', 'dose'] as const;
 
 /** Effect preview: arrows for juniors, numbers for commanders. Never color alone. */
@@ -163,11 +188,11 @@ export function DeltaList({ d, level, empty }: { d: Deltas | null; level: Level;
     if (!v) continue;
     if (k === 'dose' && level === 'junior' && v < 1) continue;
     const good = k === 'dose' ? v < 0 : v > 0;
-    const mag = Math.abs(v);
+    const mag = Math.abs(k === 'dose' ? mGy(v) : v);
     parts.push(
       <span key={k} className={`delta ${good ? 'up' : 'down'}`}>
         <span aria-hidden>{resourceIcon[k]}</span> {k === 'dose' ? tr.res.dose : tr.res[k]}{' '}
-        {level === 'commander' ? `${v > 0 ? '+' : '−'}${fmtNum(mag)}` : arrows(v)}
+        {level === 'commander' ? `${v > 0 ? '+' : '−'}${fmtNum(mag, k === 'dose' ? 2 : 1)}${k === 'dose' ? ` ${tr.doseInfo.unit}` : ''}` : arrows(v)}
       </span>,
     );
   }

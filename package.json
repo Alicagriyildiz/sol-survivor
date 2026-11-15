@@ -11,7 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "balance": "vitest run tests/balance.test.ts --reporter=verbose"
+    "balance": "vitest run tests/balance.test.ts --reporter=verbose",
+    "fetch-data": "node scripts/fetch-data.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

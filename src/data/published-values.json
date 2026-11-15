@@ -1,0 +1,57 @@
+{
+  "kind": "manual",
+  "note": "Typed in by hand from official NASA/JPL pages. NOT a dataset and NOT downloaded by scripts/fetch-data.mjs. Every value has the page it was read from and a short quote. Opened on accessedAt.",
+  "accessedAt": "2026-11-15",
+  "values": {
+    "marsSurfaceAbsorbedDose": {
+      "value": 210,
+      "unit": "µGy/day",
+      "what": "Curiosity RAD, average absorbed dose rate from galactic cosmic rays on the surface of Mars (Gale Crater)",
+      "url": "https://science.nasa.gov/resource/radiation-measurements-on-mars/",
+      "quote": "contribute a slowly varying dose rate of about 210 micrograys per day"
+    },
+    "sept2017MarsSurface": {
+      "value": null,
+      "unit": null,
+      "what": "Sept 2017 solar event at Mars: RAD surface radiation more than doubled (no number given on the page)",
+      "url": "https://www.jpl.nasa.gov/news/large-solar-storm-sparks-global-aurora-and-doubles-radiation-levels-on-the-martian-surface/",
+      "quote": "radiation levels on the surface more than double any previously measured by the Curiosity rover's Radiation Assessment Detector"
+    },
+    "stormTauPeak": {
+      "value": 10.8,
+      "unit": "tau (atmospheric opacity)",
+      "what": "2018 global dust storm, last tau measured by Opportunity (10 June 2018)",
+      "url": "https://www.jpl.nasa.gov/news/six-things-about-opportunitys-recovery-efforts/",
+      "quote": "the last tau measured by Opportunity was 10.8 on June 10",
+      "conflict": "https://science.nasa.gov/resource/on-mars-light-is-energy/ gives 10.5 for the same day; the game uses 10.8 (two JPL pages). Either value gives the same game number."
+    },
+    "stormTauNormal": {
+      "value": 0.5,
+      "unit": "tau",
+      "what": "Usual tau at Opportunity's location",
+      "url": "https://www.jpl.nasa.gov/news/six-things-about-opportunitys-recovery-efforts/",
+      "quote": "an average tau for its location on Mars is usually 0.5"
+    },
+    "stormTauRecharge": {
+      "value": 2.0,
+      "unit": "tau",
+      "what": "Tau below which JPL expected Opportunity could recharge its batteries",
+      "url": "https://www.jpl.nasa.gov/news/six-things-about-opportunitys-recovery-efforts/",
+      "quote": "Opportunity will need a tau of less than 2.0 ... recharge its batteries"
+    },
+    "opportunityLowestEnergy": {
+      "value": 21,
+      "unit": "watt-hours (per sol)",
+      "what": "Opportunity's energy on 10 June 2018, lowest measured at that time",
+      "url": "https://science.nasa.gov/resource/on-mars-light-is-energy/",
+      "quote": "Energy level on that day (21 watt-hours) was the lowest ever measured on Opportunity at that time."
+    },
+    "flareClassDefinition": {
+      "value": "C = 1e-6, M = 1e-5, X = 1e-4 W/m^2 (peak 1-8 Å X-ray flux); the number after the letter is the multiplier",
+      "unit": "W/m^2",
+      "what": "GOES flare classes, used by content/data.ts flareStrength()",
+      "url": "https://hdrl.gsfc.nasa.gov/LWS_Space_Weather/GOES_Xray_descrip.html",
+      "quote": "The number is the multiplier needed to specify the exact peak flux."
+    }
+  }
+}

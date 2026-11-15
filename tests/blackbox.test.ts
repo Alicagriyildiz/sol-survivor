@@ -90,8 +90,10 @@ describe('counterfactual', () => {
     // Use tape on sol 10 (apollo) in an alt timeline where tape was already used? Build directly:
     // play careful, then change the sol-10 decision to "apollo" when the original used tape on sol 13.
     let found = false;
-    for (let seed = 1; seed <= 60 && !found; seed++) {
-      const log = logOf('careful', seed);
+    // The careful bot rarely uses tea leaves since session 3, so random-bot logs are searched too.
+    const logs = (['careful', 'random'] as const).flatMap((bot) => Array.from({ length: 120 }, (_, i) => logOf(bot, i + 1)));
+    for (const log of logs) {
+      if (found) break;
       const orig = replay(engine, log.seed, log.config, log.actions);
       const usedTape13 = orig.decisions.find((d) => d.faultId.startsWith('s13_leak') && d.optionId === 'teaLeaves');
       const co2 = orig.decisions.findIndex((d) => d.faultId === 's10_co2' && d.optionId !== 'apollo');
@@ -116,11 +118,17 @@ describe('counterfactual', () => {
       const idx = orig.decisions.findIndex((d) => d.faultId === 's6_shelter');
       const spe = orig.decisions.find((d) => d.faultId === 's12_spe');
       if (idx < 0 || !spe || !['hideAll', 'hideShort'].includes(spe.optionId)) continue;
+      // With a weak (C/low-M class) real event the shelter barely matters; check strong ones.
+      if ((orig.rolls.speEvent ?? 0) < 2) continue;
       const d = orig.decisions[idx]!;
       const to = d.optionId === 'regolith' ? 'defer' : 'regolith';
       const alt = alternatives(engine, log, idx).find((a) => a.optionId === to);
       if (!alt || alt.invalid) continue;
       const cf = counterfactual(engine, log, idx, to);
+      // Only when the shelter really changed the sol 12 dose (it may not: the Shield on
+      // that day can differ between the two missions and cancel the shelter's effect).
+      const speDose = (st: typeof orig) => st.trace.find((t) => t.key === 'd:s12:s12_spe')?.deltas.dose ?? 0;
+      if (Math.abs(speDose(orig) - speDose(cf.alt.final)) < 2) continue;
       const linked = cf.explanation.steps.filter((s) => s.type === 'linked');
       expect(linked.some((s) => s.type === 'linked' && s.sol === 12)).toBe(true);
       expect(cf.explanation.steps[0]).toMatchObject({ type: 'changed', sol: 6 });
