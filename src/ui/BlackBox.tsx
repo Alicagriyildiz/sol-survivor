@@ -11,7 +11,7 @@ import {
   type Rescue,
 } from '../blackbox';
 import { data, engine, fmt, tr } from '../content';
-import { numSuffix } from '../content/lang/tr';
+import { numSuffix } from '../content';
 import { reservesUsed } from '../sim/selectors';
 import type { GameState, Invalid } from '../sim/types';
 import { Chart, fmtDate, fmtMGy, fmtNum, type Level } from './parts';

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { carefulBot } from '../bots/bots';
 import { createRng } from '../sim/rng';
 import type { MissionLog } from '../blackbox';
-import { DEFAULT_CONFIG, engine } from '../content';
+import { engine } from '../content';
+import { configFor } from '../content/config';
+import { demoState, DEMO_SEED, type DemoStop } from './demo';
 import type { Action, GameState } from '../sim/types';
 import { BlackBox } from './BlackBox';
 import type { Level } from './parts';
@@ -44,7 +46,7 @@ export function App() {
   };
 
   const start = (seed: number, level: Level, tutorialOn: boolean, jumpTo = 0) => {
-    let state = engine.init(seed, DEFAULT_CONFIG);
+    let state = engine.init(seed, configFor(level));
     const actions: Action[] = [];
     // Dev only: let the careful bot play up to sol `jumpTo` (screenshots, testing).
     const rng = createRng(seed);
@@ -64,6 +66,14 @@ export function App() {
       tutorialOn,
     });
     setScreen('briefing');
+  };
+
+  /** Presentation shortcut: replay the recorded demo log up to a stop (docs/DEMO.md). */
+  const startDemo = (stop: DemoStop) => {
+    const { state, actions } = demoState(stop);
+    current.current = state;
+    setSession({ seed: DEMO_SEED, level: 'junior', state, actions, last: null, tutorial: null, tutorialOn: false });
+    setScreen(state.outcome ? 'end' : 'briefing');
   };
 
   const act = (a: Action) => {
@@ -91,9 +101,9 @@ export function App() {
   }, []);
 
   if (screen === 'data') return <DataScreen onBack={() => setScreen(dataFrom)} />;
-  if (screen === 'start' || !session) return <Start onStart={start} onData={() => openData('start')} view={view} setView={setView} />;
+  if (screen === 'start' || !session) return <Start onStart={start} onDemo={startDemo} onData={() => openData('start')} view={view} setView={setView} />;
   const s = session.state;
-  const log: MissionLog = { seed: session.seed, config: DEFAULT_CONFIG, actions: session.actions };
+  const log: MissionLog = { seed: session.seed, config: configFor(session.level), actions: session.actions };
 
   switch (screen) {
     case 'briefing':
@@ -110,6 +120,7 @@ export function App() {
           setTutorial={(t) => setSession((cur) => (cur ? { ...cur, tutorial: t } : cur))}
           view={view}
           setView={setView}
+          onData={() => openData('play')}
         />
       );
     case 'report':

@@ -4,6 +4,7 @@ import { SOURCES, engine, extra, fmt, numSuffix, tr } from '../content';
 import { activeNotes, reservesUsed, score, solReportRows, todayFaults, type ReportRow, type ReportSection } from '../sim/selectors';
 import { RESOURCES, type Deltas, type GameState } from '../sim/types';
 import { DoseCompare, SpaceWeatherLine, StormLine, StudyLine } from './DataViews';
+import { DEMO_STOPS, type DemoStop } from './demo';
 import { LangSwitch } from './LangSwitch';
 import { Chart, DeltaList, fmtMGy, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
@@ -12,16 +13,27 @@ import { webglAvailable, type View } from './view';
 export function Start({
   onStart,
   onData,
+  onDemo,
   view,
   setView,
 }: {
+  onDemo: (stop: DemoStop) => void;
   onStart: (seed: number, level: Level, tutorial: boolean) => void;
   onData: () => void;
   view: View;
   setView: (v: View) => void;
 }) {
   const can3d = webglAvailable();
-  const [seed, setSeed] = useState(() => 1 + Math.floor(Math.random() * 9999));
+  // `?seed=N` (also in the production build) fixes the seed, e.g. for a rehearsed demo.
+  const [seed, setSeed] = useState(() => {
+    try {
+      const q = Number(new URLSearchParams(window.location.search).get('seed'));
+      if (Number.isInteger(q) && q > 0) return q;
+    } catch {
+      // no URL access: random seed
+    }
+    return 1 + Math.floor(Math.random() * 9999);
+  });
   const [level, setLevel] = useState<Level>('junior');
   const [tutorial, setTutorial] = useState(true);
   return (
@@ -69,6 +81,19 @@ export function Start({
       <button className="btn" onClick={onData}>
         📊 {tr.data.open}
       </button>
+      <details className="card demo-card">
+        <summary>
+          🎬 <strong>{tr.act.demo}</strong> · <span className="dim small">{tr.act.demoTitle}</span>
+        </summary>
+        <p className="dim small">{tr.act.demoHint}</p>
+        <div className="row wrap">
+          {DEMO_STOPS.map((st, i) => (
+            <button key={String(st)} className="btn small" onClick={() => onDemo(st)}>
+              {i + 1} · {st === 4 ? tr.act.demo4 : st === 6 ? tr.act.demo6 : st === 12 ? tr.act.demo12 : tr.act.demoEnd}
+            </button>
+          ))}
+        </div>
+      </details>
       <div className="card glossary">
         <h3>{tr.ui.glossaryTitle}</h3>
         <dl>

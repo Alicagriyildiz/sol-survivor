@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { DEFAULT_CONFIG, data, engine, fmt, tr } from '../content';
+import { DEFAULT_CONFIG, data, engine, fmt, numLocale, tr } from '../content';
 import { criticalResources, healthStatus, previewParts, resourceStatus, type Status } from '../sim/selectors';
 import { RESOURCES, type Action, type Deltas, type GameState, type ResourceId, type SolSnapshot } from '../sim/types';
 import { colors, itemIcon, resourceIcon, statusColor, statusIcon } from './tokens';
@@ -7,7 +7,7 @@ import { colors, itemIcon, resourceIcon, statusColor, statusIcon } from './token
 export type Level = 'junior' | 'commander';
 
 export const fmtNum = (n: number, digits = 1) =>
-  (Math.round(n * 10 ** digits) / 10 ** digits).toLocaleString('tr-TR', { maximumFractionDigits: digits });
+  (Math.round(n * 10 ** digits) / 10 ** digits).toLocaleString(numLocale(), { maximumFractionDigits: digits });
 /** '2017-09-10' -> '10 Eylül 2017' (no Date object needed). */
 export const fmtDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);

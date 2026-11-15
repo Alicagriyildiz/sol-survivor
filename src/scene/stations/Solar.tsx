@@ -3,8 +3,8 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import * as THREE from 'three';
 import { colorHex, colors } from '../../ui/tokens';
-import { Blinker, Lamp, now, RBox, showsBefore, type RT, type StationProps } from '../core';
-import { PANEL_COLS, PANEL_H, PANEL_ROWS, PANEL_TILT, PANEL_W, panelAt, type V3 } from '../world';
+import { Blinker, Lamp, now, RBox, showsBefore, stationAct, type RT, type StationProps } from '../core';
+import { PANEL_COLS, PANEL_H, PANEL_ROWS, PANEL_TILT, PANEL_W, PANEL_WIPE_FAULTS, panelAt, RADIATOR, type V3 } from '../world';
 
 const DUST_W = 256;
 
@@ -123,7 +123,7 @@ function SolarField({ rt, dustLevel }: { rt: MutableRefObject<RT>; dustLevel: nu
       cellMat.current.metalness = 0.55 * (1 - d);
     }
     // Work panel: dust layer from the canvas; level fades with the field outside a wipe.
-    const wiping = r && r.run.station === 'solar' && r.run.kind === 'wipe' && (r.phase === 'do' || r.phase === 'approach');
+    const wiping = r && r.run.station === 'solar' && r.run.kind === 'wipe' && PANEL_WIPE_FAULTS.includes(r.run.faultId ?? '') && (r.phase === 'do' || r.phase === 'approach');
     if (dustMat.current) dustMat.current.opacity = wiping ? Math.max(0.0001, r!.run.from.solarDust) : d;
     if (r && r.run.station === 'solar' && r.phase === 'finish') shine.current = 1;
     shine.current = Math.max(0, shine.current - dt * 0.6);
@@ -136,7 +136,7 @@ function SolarField({ rt, dustLevel }: { rt: MutableRefObject<RT>; dustLevel: nu
 
   const down = (e: ThreeEvent<PointerEvent>) => {
     const r = rt.current.run;
-    if (!r || r.run.kind !== 'wipe' || r.run.station !== 'solar' || r.phase !== 'do' || !e.uv) return;
+    if (!r || r.run.kind !== 'wipe' || r.run.station !== 'solar' || !PANEL_WIPE_FAULTS.includes(r.run.faultId ?? '') || r.phase !== 'do' || !e.uv) return;
     e.stopPropagation();
     r.mode = 'hand';
     r.holding = true;
@@ -145,7 +145,7 @@ function SolarField({ rt, dustLevel }: { rt: MutableRefObject<RT>; dustLevel: nu
   };
   const move = (e: ThreeEvent<PointerEvent>) => {
     const r = rt.current.run;
-    if (!r || !r.holding || r.run.kind !== 'wipe' || r.phase !== 'do' || !e.uv) return;
+    if (!r || !r.holding || r.run.kind !== 'wipe' || !PANEL_WIPE_FAULTS.includes(r.run.faultId ?? '') || r.phase !== 'do' || !e.uv) return;
     e.stopPropagation();
     r.mode = 'hand';
     r.lastInput = now();
@@ -245,11 +245,146 @@ function Rover() {
   );
 }
 
-export default function Solar({ rt, work }: StationProps) {
+/** Sol 4 "sand trick": low sand ridges along the lower edge of every panel (stay). */
+function SandRidges({ rt, work }: StationProps) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const all = useMemo(() => {
+    const out: V3[] = [];
+    for (let r = 0; r < PANEL_ROWS; r++) for (let c = 0; c < PANEL_COLS; c++) out.push(panelAt(r, c));
+    return out;
+  }, []);
+  const o = useMemo(() => new THREE.Object3D(), []);
+  const shown = useRef(-1);
+  useFrame(() => {
+    const m = ref.current;
+    if (!m) return;
+    const a = stationAct(rt.current, 'solar');
+    let h = work.chosen.s4_dust === 'sandTrick' ? 1 : 0;
+    if (a && a.faultId === 's4_dust' && a.optionId === 'sandTrick') h = a.phase === 'finish' ? 1 : a.p;
+    if (a && a.before && a.faultId !== 's4_dust') h = a.from.chosen.s4_dust === 'sandTrick' ? 1 : 0;
+    if (Math.abs(h - shown.current) < 0.003) return;
+    shown.current = h;
+    all.forEach((p, i) => {
+      // Ridges appear one panel after another as the job goes on.
+      const k = Math.max(0, Math.min(1, h * all.length - (all.length - 1 - i)));
+      o.position.set(p[0], 0.05, p[2] + 0.62);
+      o.scale.set(1.7, Math.max(0.001, k) * 0.12, 0.25);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, all.length]} receiveShadow>
+      <sphereGeometry args={[0.5, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <meshStandardMaterial color={colorHex.marsDust} roughness={1} flatShading />
+    </instancedMesh>
+  );
+}
+
+/** Sol 8 "tie down the panels": straps over every panel and stakes in the ground (stay). */
+function Straps({ rt, work }: StationProps) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const all = useMemo(() => {
+    const out: V3[] = [];
+    for (let r = 0; r < PANEL_ROWS; r++) for (let c = 0; c < PANEL_COLS; c++) out.push(panelAt(r, c));
+    return out;
+  }, []);
+  const o = useMemo(() => new THREE.Object3D(), []);
+  const shown = useRef(-1);
+  useFrame(() => {
+    const m = ref.current;
+    if (!m) return;
+    const a = stationAct(rt.current, 'solar');
+    let h = work.flags.panelsSecured ? 1 : 0;
+    if (a && a.faultId === 's8_secure') h = a.phase === 'finish' ? 1 : a.p;
+    else if (a && a.before) h = a.from.flags.panelsSecured ? 1 : 0;
+    if (Math.abs(h - shown.current) < 0.003) return;
+    shown.current = h;
+    all.forEach((p, i) => {
+      const k = Math.max(0, Math.min(1, h * all.length - i));
+      o.position.set(p[0], p[1] + 0.06, p[2]);
+      o.rotation.set(-Math.PI / 2 + PANEL_TILT, 0, 0);
+      o.scale.set(k < 0.01 ? 0.001 : 1, 1, 1);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, all.length]}>
+      <boxGeometry args={[0.08, PANEL_H + 0.25, 0.03]} />
+      <meshStandardMaterial color={colorHex.warn} roughness={0.8} />
+    </instancedMesh>
+  );
+}
+
+/** Sol 14 radiator (variant): fins covered in dust until cleaned. */
+function Radiator({ rt, work }: StationProps) {
+  const dust = useRef<THREE.MeshStandardMaterial>(null);
+  const brush = useRef<THREE.Group>(null);
+  const st = useMemo(() => ({ puff: 0, v: new THREE.Vector3() }), []);
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    const a = stationAct(rt.current, 'solar');
+    const job = a && a.faultId === 's14_radiator';
+    const w = a && a.before ? a.from : work;
+    let d = w.open.includes('s14_radiator') ? 1 : 0;
+    if (job && a.optionId === 'cleanRadiator') d = a.phase === 'finish' ? 0 : 1 - a.p;
+    if (dust.current) dust.current.opacity = d * 0.9;
+    if (brush.current) {
+      brush.current.visible = !!job && a.optionId === 'cleanRadiator' && a.phase === 'do';
+      if (brush.current.visible) {
+        const x = Math.sin(a!.p * Math.PI * 6) * 0.7;
+        const y = 0.5 + (1 - a!.p) * 0.6;
+        brush.current.position.set(RADIATOR[0] + x, y, RADIATOR[2] + 0.18);
+        if ((st.puff += dt * 10) > 1) {
+          st.puff = 0;
+          rt.current.puff(st.v.set(RADIATOR[0] + x, y, RADIATOR[2] + 0.25), 2);
+        }
+      }
+    }
+  });
+  return (
+    <group>
+      <group position={RADIATOR}>
+        <RBox size={[1.8, 1.3, 0.12]} position={[0, 0.85, 0]} color={colorHex.hullDark} />
+        {Array.from({ length: 9 }, (_, i) => (
+          <mesh key={i} position={[-0.8 + i * 0.2, 0.85, 0.08]}>
+            <boxGeometry args={[0.04, 1.2, 0.1]} />
+            <meshStandardMaterial color={colorHex.hull} metalness={0.4} roughness={0.4} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0.85, 0.14]}>
+          <planeGeometry args={[1.8, 1.3]} />
+          <meshStandardMaterial ref={dust} color={colorHex.marsDust} transparent opacity={0} roughness={1} depthWrite={false} />
+        </mesh>
+        {[-0.7, 0.7].map((x) => (
+          <mesh key={x} position={[x, 0.2, 0]}>
+            <cylinderGeometry args={[0.04, 0.05, 0.4, 6]} />
+            <meshStandardMaterial color={colorHex.metal} />
+          </mesh>
+        ))}
+      </group>
+      <group ref={brush} visible={false}>
+        <mesh>
+          <boxGeometry args={[0.25, 0.06, 0.08]} />
+          <meshStandardMaterial color={colorHex.accentDim} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+export default function Solar(props: StationProps) {
+  const { rt, work } = props;
   const wp = panelAt(PANEL_ROWS - 1, 0);
   return (
     <>
       <SolarField rt={rt} dustLevel={work.solarDust} />
+      <SandRidges {...props} />
+      <Straps {...props} />
+      <Radiator {...props} />
       <Lamp station="solar" rt={rt} work={work} at={[wp[0] - 1.25, 0.85, wp[2] + 0.4]} />
     </>
   );

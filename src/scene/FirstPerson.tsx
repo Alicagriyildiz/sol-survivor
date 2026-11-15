@@ -26,6 +26,9 @@ import {
   angleDelta,
   clampPitch,
   EYE,
+  FAULT_WORK,
+  HAB_R,
+  PANEL_WIPE_FAULTS,
   path,
   pitchTo,
   pointAt,
@@ -53,6 +56,8 @@ export interface FirstPersonProps {
   coach: ReactNode;
   /** Bottom bar (inventory, end sol). */
   dock: ReactNode;
+  /** Helmet display line (e.g. the real solar event on Sol 12). */
+  hud?: ReactNode;
   hint: boolean;
 }
 
@@ -149,11 +154,12 @@ function Eyes({ rt, goal, onArrive }: { rt: MutableRefObject<RT>; goal: string; 
   const arrive = useRef(onArrive);
   arrive.current = onArrive;
 
-  const face = (id: string, close = false) => {
+  const face = (id: string, close = false, faultId: string | null = null) => {
     const s = SPOTS[id] ?? SPOTS.hub!;
     const R = rt.current;
-    const from: V3 = close ? s.work.pos : [s.stand[0], EYE, s.stand[1]];
-    const to = close ? s.work.look : s.look;
+    const wp = (faultId && FAULT_WORK[faultId]) || s.work;
+    const from: V3 = close ? wp.pos : [s.stand[0], EYE, s.stand[1]];
+    const to = close ? wp.look : s.look;
     R.tPos.set(from[0], from[1], from[2]);
     R.tYaw = R.yaw + angleDelta(R.yaw, yawTo([from[0], from[2]], [to[0], to[2]]));
     R.tPitch = clampPitch(pitchTo(from, to));
@@ -211,7 +217,7 @@ function Eyes({ rt, goal, onArrive }: { rt: MutableRefObject<RT>; goal: string; 
     const R = rt.current;
     const ph = R.run?.phase ?? 'none';
     if (ph !== lastPhase.current) {
-      if (ph === 'approach') face(R.run!.run.station, true);
+      if (ph === 'approach') face(R.run!.run.station, true, R.run!.run.faultId);
       if (ph === 'none' && lastPhase.current !== 'none') face(R.at);
       lastPhase.current = ph;
     }
@@ -273,7 +279,7 @@ function RunDriver({ rt, setPhase, bar, onDone }: { rt: MutableRefObject<RT>; se
       go('do');
     } else if (r.phase === 'do') {
       const k = r.run.kind;
-      const wipeHere = k === 'wipe' && r.run.station === 'solar';
+      const wipeHere = k === 'wipe' && r.run.station === 'solar' && PANEL_WIPE_FAULTS.includes(r.run.faultId ?? '');
       if (r.mode === 'hand' && t - r.lastInput > AUTO_AFTER) r.mode = 'auto';
       if (k === 'wait') r.mode = 'auto';
       if (wipeHere) {
@@ -328,7 +334,12 @@ function Overlay({ rt, labels, arrow, target, stations }: { rt: MutableRefObject
       const x = (v.x * 0.5 + 0.5) * size.width;
       const y = (-v.y * 0.5 + 0.5) * size.height;
       const onScreen = !behind && x > 10 && x < size.width - 10 && y > 10 && y < size.height - 10;
-      const hide = !onScreen || (R.at === s.id && !R.walk && d < 3.2) || !!R.run;
+      // Outside, the indoor stations would pile up on the hab: show only those with a problem
+      // (and the mission target). Inside, far outdoor labels stay (they show the way).
+      const camOut = Math.hypot(camera.position.x, camera.position.z) > HAB_R + 1.5 && !(camera.position.x > HAB_R && camera.position.x < 12.5 && Math.abs(camera.position.z) < 1.6);
+      const indoor = !spot.outside;
+      const clutter = camOut && indoor && s.id !== 'hub' && !s.faults && s.id !== target;
+      const hide = !onScreen || clutter || (R.at === s.id && !R.walk && d < 3.2) || !!R.run;
       if (el) {
         el.style.display = hide ? 'none' : '';
         if (!hide) {
@@ -384,7 +395,7 @@ function ContextWatch({ onLost }: { onLost: () => void }) {
 const KIND_ICON: Record<ActionKind, string> = { wipe: '🧹', patch: '🩹', replace: '🔩', switch: '🎚', plug: '🔌', dig: '⛏', console: '⌨', wait: '⏳' };
 
 export default function FirstPerson(props: FirstPersonProps) {
-  const { stations, goal, look, work, run, target, onPick, onArrive, onRunDone, onLost, coach, dock, hint } = props;
+  const { stations, goal, look, work, run, target, onPick, onArrive, onRunDone, onLost, coach, dock, hint, hud } = props;
   const rt = useRef<RT>({
     pos: new THREE.Vector3(0, EYE, 0),
     yaw: 0,
@@ -539,8 +550,8 @@ export default function FirstPerson(props: FirstPersonProps) {
 
   const r = run;
   const kind = r?.kind ?? null;
-  const wipeHere = kind === 'wipe' && r?.station === 'solar';
-  const hintText = kind ? (wipeHere ? tr.act.hintWipe : kind === 'wait' ? tr.act.hintWait : tr.act.hint[kind]) : '';
+  const wipeHere = kind === 'wipe' && r?.station === 'solar' && PANEL_WIPE_FAULTS.includes(r.faultId ?? '');
+  const hintText = kind ? (wipeHere ? tr.act.hintWipe : kind === 'wait' ? (r?.station === 'shelter' && r.faultId === 's12_spe' ? tr.act.inShelter : tr.act.hintWait) : tr.act.hint[kind]) : '';
 
   return (
     <section className={`fp ${look.storm ? 'storm' : ''} ${look.night ? 'night' : ''}`} aria-label={tr.ui.stations}>
@@ -662,6 +673,7 @@ export default function FirstPerson(props: FirstPersonProps) {
             )}
           </div>
         )}
+        {hud && <div className="fp-hud">{hud}</div>}
         <div className="fp-dock">{dock}</div>
       </div>
       {/* Station buttons: visible strip, also the keyboard way to move. */}

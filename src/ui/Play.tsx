@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { SolarEventCard } from './DataViews';
+import { LangSwitch } from './LangSwitch';
 import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
-import { engine, fmt, tr } from '../content';
+import { data, engine, fmt, tr } from '../content';
 import {
   activeNotes,
   criticalResources,
@@ -16,7 +17,7 @@ import {
   type RoutineView,
 } from '../sim/selectors';
 import type { Action, GameState, Invalid, ResourceId } from '../sim/types';
-import { DeltaList, fmtHours, Inventory, TopBar, Warnings, type Level } from './parts';
+import { DeltaList, fmtDate, fmtHours, Inventory, TopBar, Warnings, type Level } from './parts';
 import { stationInfo, type StationInfo } from './stationInfo';
 import { markSceneBroken, SceneBoundary, sceneBroken, webglAvailable, type View } from './view';
 import { sceneLook, workLook } from '../scene/look';
@@ -339,6 +340,22 @@ function HoursLog({ s }: { s: GameState }) {
   );
 }
 
+/** Maintenance job that helps the weakest of Power / Life Support / Shield (null: none possible). */
+function maintenanceFor(s: GameState): { station: string; hours: number } | null {
+  const helps: Record<string, string> = { power: 'tune', life: 'tend', shield: 'bags' };
+  const order = (['power', 'life', 'shield'] as const).slice().sort((a, b) => s.res[a] - s.res[b]);
+  const ok = (rid: string) => engine.content.routines.some((r) => r.id === rid) && !engine.check(s, { type: 'routine', routineId: rid });
+  for (const r of order) {
+    const rid = helps[r]!;
+    if (ok(rid)) {
+      const v = routineView(engine, s, rid);
+      return { station: engine.routine(rid).station, hours: v.cost.total };
+    }
+  }
+  const any = engine.content.routines.find((r) => ok(r.id));
+  return any ? { station: any.station, hours: routineView(engine, s, any.id).cost.total } : null;
+}
+
 /** One task line: what to do and where (place and walking cost, never which option). */
 function MissionBar({
   s,
@@ -385,9 +402,21 @@ function MissionBar({
       </button>
     );
   } else if (m.kind === 'done') {
-    text = m.canWork ? tr.ui.missionDone : tr.ui.missionDoneTired;
-    button = (
-      <button className="btn primary big pulse" onClick={endDay}>
+    // Spare hours: point at the maintenance job for the weakest gauge (measured: obeying a
+    // bare "End sol" here cost players ~28 win points). End sol stays as a second button.
+    const maint = m.canWork ? maintenanceFor(s) : null;
+    text = maint ? fmt(tr.ui.missionMaint, { station: tr.stations[maint.station]!.name, h: fmtHours(maint.hours) }) : m.canWork ? tr.ui.missionDone : tr.ui.missionDoneTired;
+    button = maint ? (
+      <>
+        <button className="btn primary" onClick={() => open(maint.station)}>
+          🔧 {tr.stations[maint.station]!.name} →
+        </button>
+        <button className="btn" onClick={endDay}>
+          🌙 {tr.ui.endSol}
+        </button>
+      </>
+    ) : (
+      <button className={`btn primary big ${m.canWork ? '' : 'pulse'}`} onClick={endDay}>
         🌙 {tr.ui.endSol}
       </button>
     );
@@ -526,7 +555,9 @@ export function Play({
   setTutorial,
   view,
   setView,
+  onData,
 }: {
+  onData: () => void;
   s: GameState;
   level: Level;
   act: (a: Action) => void;
@@ -640,6 +671,13 @@ export function Play({
       {endButton}
     </>
   );
+  // Sol 12: the real recorded event is named on the helmet display (date and class).
+  const spe = sceneLook(s).solarEvent ? data.solarEventOf(s) : null;
+  const eventHud = spe ? (
+    <div className="fp-event" role="status">
+      ☀ {fmt(tr.act.eventHud, { date: fmtDate(spe.date), cls: spe.classType })}
+    </div>
+  ) : null;
   const grid = <StationGrid info={info} open={openStation} coachFor={(id) => (id === coachStation ? bubble() : null)} />;
 
   return (
@@ -649,7 +687,17 @@ export function Play({
         level={level}
         flash={last && last.action.type !== 'endSol' && !run ? last : null}
         coach={step === 'bars' || step === 'hours' ? { at: step, bubble: bubble() } : null}
-        extra={<ViewSwitch view={use3d ? '3d' : '2d'} setView={setView} can3d={can3d} />}
+        extra={
+          <div className="topbar-extra">
+            <ViewSwitch view={use3d ? '3d' : '2d'} setView={setView} can3d={can3d} />
+            <div className="row">
+              <LangSwitch />
+              <button className="btn small ghost" onClick={onData} title={tr.act.dataBtn}>
+                📊 <span className="hide-narrow">{tr.act.dataBtn}</span>
+              </button>
+            </div>
+          </div>
+        }
       />
       <Warnings s={s} />
       <div className="play-top">
@@ -685,6 +733,7 @@ export function Play({
                 onRunDone={(id) => setRun((cur) => (cur && cur.id === id ? null : cur))}
                 coach={coachStation || step === 'choose' ? bubble() : null}
                 dock={dock}
+                hud={eventHud}
                 onLost={() => setSceneFailed(true)}
                 hint={sol1}
               />

@@ -115,6 +115,15 @@ export const SPOTS: Record<string, Spot> = {
   },
 };
 
+/** Faults whose job is the hand-wipe of the solar work panel. */
+export const PANEL_WIPE_FAULTS = ['s4_dust', 's11_panels'];
+/** Radiator next to the solar field (Sol 14 variant). */
+export const RADIATOR: V3 = [18.6, 0, -11.6];
+/** Close-up poses for jobs that are not at the station's main work object. */
+export const FAULT_WORK: Record<string, { pos: V3; look: V3 }> = {
+  s14_radiator: { pos: [18.6, 1.75, -10.0], look: [18.6, 0.85, -11.6] },
+};
+
 /** Waypoint graph (a tree). Inside walks go through the hab centre; EVAs through the airlock. */
 const NODES: Record<string, V2> = {
   centre: [0, 0],
