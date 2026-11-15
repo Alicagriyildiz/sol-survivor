@@ -1,5 +1,70 @@
 # İlerleme
 
+## Oturum 6 — 2026-11-15 (sunum günü) — birinci şahıs 3D, işin canlı yapılması, İngilizce, Komutan
+
+Çekirdek, içerik sayıları, veri ve Kara Kutu mantığı değişmedi (yalnız `config.ts`'e Komutan görev ayarı eklendi).
+Eski izometrik sahne silindi. Ayrıntı: `docs/3D-PLAN.md`, `docs/DESIGN.md` §6d, sunum yolu `docs/DEMO.md`.
+
+### 3D (birinci şahıs)
+- Göz hizası kamera, sürükleyerek bakma (fare/parmak, işaretçi kilidi yok), tıklayınca yol noktalarından yürüme (≤ 3,2 sn, dokununca biter), istasyon adları + durum işaretleri, hedef görüş dışındaysa kenarda yön oku, altta istasyon düğmeleri, envanter, Günü bitir, ses düğmesi.
+- Dünya: yuvarlak ana üs (iç: ışıklı tavan, borular, masa, dolaplar, zemin çizgileri; güç düşünce kararır), hava kilidi tüneli, sera kubbesi, tünelle gömülü sığınak, belirgin uzakta güneş paneli alanı ve iniş alanı; avlu, dönen çanak, eklemli robot kollu araç, yanıp sönen ışıklar.
+- Ortam: gökyüzü geçişi (gündüz pembe-mor, gece yıldızlı, fırtına bulanık + toz duvarı, Sol 12 mor perdeler), güneş + dolgu ışığı, yumuşak gölge, ACES ton eşleme, ufukta sisle birleşen tepe silueti, renkli engebeli zemin, araç izleri, kayalar (instanced + Kenney), uçuşan toz.
+- **8 eylem türünün hepsi çalışıyor; her seçenek ve bakım işi bir türe bağlı (test).** Her iş istasyonun kendi nesnesinde oynar (ayrıntı aşağıda). Sorun metinsiz görünür (toz, kırmızı yanıp sönen lamba ve konsol, buhar, kıvılcım, tuz kabuğu, çatlak), ertelendikçe kötüleşir (lamba hızlanır/büyür, toz koyulaşır, buhar/kıvılcım artar). Sonuç sonraki sollerde kalır (durumdan türetilir).
+- Elle yapma: panelde sürükleyerek silme (toz gerçekten silinir, %85'te biter); diğer işlerde "Basılı tut" (ya da görünüme basılı tutmak / Boşluk); 5 sn dokunulmazsa astronot yapar; "Kendisi yapsın" (Enter), "Atla" (Esc). Başarısız olunamaz. Üst çubuk iş bitene kadar önceki değerleri gösterir; bitince "✓ Bitti · ⏱ −X sa", turkuaz parıltı ve kısa ses.
+- İşe göre alet: fırça, bant, kartuş/anahtar, kürek, fiş, tablet; şalterde açık el.
+- Sol 12: kask ekranında "Gerçek güneş olayı: 10 Eylül 2017 · X8.2 sınıfı" (DONKI kaydından), sığınakta oturarak bekleme, duvardan sızan mor parçacıklar (güçlendirilmiş duvarda az).
+- Kilitli istasyona yürünmez (panel kilit notuyla açılır). Kalite kademesi: dokunmatik küçük ekranda gölge yok, daha az parçacık.
+
+| İstasyon | Kim | İşler |
+|---|---|---|
+| Ana üs | ana oturum | filtre değiştir / silkele / vur / bantla (Apollo), ters yıkama (vana + su), pompa bakımı (kapak, yeni gövde) / yağlama (damla, yağ kutusu kalır), fanları aç (tek tek / hepsi), oksijen tam güç, ışık kıs, konsoldan mesaj (zarf, yazı, dalga), gece programı, fener kablosu |
+| Güneş paneli | ana oturum | elle silme (yarım temizlik dahil), kum serpme (kum sırtları kalır), panelleri bağla (kayışlar kalır), radyatör temizliği |
+| Batarya | Ajan S1 | fiş tak + hücreler dolar (tam/yarım), şalterler (sera lambası, ısıtıcı), pompa değiştir / ödünç pompa, bataryaların yarısını kapat (kepenk), ayar konsolu |
+| Sera | Ajan S1 | toprağı yıka, topraksız tepsiye taşı, dayanıklı bitki ek, bitkilerin oksijeni, sızıntıya yama / çay yaprağı + bant, serayı kapat, bitkilere bak |
+| Sığınak | Ajan S2 | regolit torbaları (oda küçülür), su bidonları, torba bakımı, duvar ısıtıcısını kapat (buz), Sol 12'de içeride bekleme |
+| Hava kilidi | Ajan S2 | yeni conta / silip geç, depo sızıntısı yama / çay yaprağı / bölmeyi kapat, kabloları içeri al, su bidonu köşesi |
+| İniş alanı | Ajan S2 | kayaları it, işaret direkleri, yansıtıcılar; fener ışığı (tam/kısık/yok) |
+
+### Modeller
+Kenney Space Kit (CC0, lisans dosyası pakette okundu): 20 GLB, ~280 kB, `public/models/kenney/`; malzemeler yüklenirken palete çevrilir; yüklenemezse yedek şekil. Quaternius paketleri kullanılmadı (pakette lisans dosyası yok, renkler atlas dokusunda). `CREDITS.md`.
+
+### Diğer
+- **İngilizce** (Ajan D): `lang/en.ts` tam karşılık, TR/EN seçimi (başlangıç + üst çubuk), ilk açılışta tarayıcı dili, `?lang=`; test eksik anahtarı yakalar. Bitiş ekranında Kara Kutu en üstte.
+- **Türkçe metinler** (Ajan B): 103 düzeltme (kısa cümleler, terim açıklamaları, "EVA'da radyasyon alırsın" gibi doğru anlatım).
+- **Komutan** (Ajan A): başlangıç Güç 57 / Yaşam 61. Dikkatli %44 (201-400: %46,5), rastgele %2,5, sağlam %0, en ucuz %0, hiçbir şey %0, Sol 1 kaybı yok; Kara Kutu Komutan ayarıyla testli (`tests/commander.test.ts`). Genç seviye hedefleri ve testleri aynı.
+- **Görev satırı ölçümü** (Genç, tohum 1-200): görev satırını izleyip rastgele seçen %1,5, hep ilk kartı seçen %0; bakım da yaparlarsa %27,5 / %30. Asıl tuzak "sorunlar bitti" durumundaki tek "Günü bitir" düğmesiydi → şimdi en zayıf göstergenin bakım işine götüren düğme + ikinci düğme Günü bitir.
+- **Demo:** Başlangıç → 🎬 Demo (tohum 148, kayıtlı oyun: Sol 4 / 6 / 12 / görev sonu), `?seed=` üretimde de çalışır, `docs/DEMO.md`.
+- Oyun içinden Veriler düğmesi; ses (tarayıcıda üretilir, kapatılabilir).
+
+### Doğrulama (headless Chrome, SwiftShader WebGL, CDP ile gerçek tıklama)
+| Koşu | Sonuç |
+|---|---|
+| 3D, TR, tohum 148, 1280×800, geliştirme: tüm görev | 36 karar, 45 iş (atla / astronot yapsın karışık), görev sonu ekranı; konsol hatası yok |
+| 3D, EN, tohum 30, aynı | Aynı akış İngilizce; konsol hatası yok |
+| Üretim (`/sol-survivor/`), EN: DEMO.md yolu | Sol 4 elle silme + panel temiz kalıyor, Sol 12 kask satırı, görev sonu, Kara Kutu: Sol 6 regolit → "Mission over (Sol 14)" ↔ "You survived" |
+| Her istasyonun işleri tek tek (ekran görüntüsü) | Ana üs, panel, batarya, sera, sığınak (Sol 6, Sol 12), hava kilidi, iniş alanı |
+| 390×844 dokunmatik | HUD okunur, dokunarak bakma ve silme çalışıyor |
+| Klavye | İstasyon düğmesi + Enter → panel (odak Kapat), Tab → Bunu yap + Enter → iş; Enter astronota yaptırır; saat düşer |
+| WebGL kapalı (üretim) | Kartlı ekran, 7 istasyon kartı |
+| Model temizliği sonrası | "model failed" / 404 yok |
+
+Gerçek GPU'lu dizüstü ve gerçek telefonda **denenmedi**. Çizim çağrısı ~420 (üs içi) / ~380 (dışarıda), ~150 bin üçgen.
+
+### Paket
+Ana parça 414 kB (gzip 133 kB; İngilizce dosya ve demo kaydı eklendi), CSS 25,7 kB, 3D parçası 1.121 kB (gzip 300 kB, geç yüklenir), modeller 282 kB (20 dosya).
+
+### Testler
+101 test: yeni `tests/world.test.ts` (her seçeneğin eylem türü, yollar, uzaklık, görünüm durumdan), `tests/lang.test.ts` (TR/EN anahtar eşitliği, yer tutucular, İngilizce Kara Kutu cümleleri), `tests/commander.test.ts`. Eski `tests/scene.test.ts` izometrik sahneyle birlikte silindi. Tip denetimi ve üretim derlemesi temiz.
+
+### Bilinen sorunlar
+- Bazı yakın planlarda eldivenin bileği kameraya yakın ve iri görünüyor.
+- Sol 12 mor gökyüzü üs içinden yalnız pencereden görünür (DEMO.md'de yazıyor).
+- Sıradan Genç seviyede bazı seçenekler hâlâ "kazandıran düğme" (Sol 6 regolit, Sol 7 talimata uy, Sol 8 tam doldur, Sol 9 ısıtıcı: dikkatli bota zorlanınca %100); Sol 13 sızıntı ve Sol 14 soğutma seçenekleri sonucu neredeyse etkilemiyor. İçerik sayısı değiştirilmedi; öneriler Ajan A raporunda.
+- Etiketler bazen üst üste biner (dışarıdan üsse bakınca sorunsuz iç istasyonlar gizlenir, sorunlu olanlar görünür).
+- Geliştirme modunda R3F'den "THREE.Clock deprecated" uyarısı.
+
+---
+
 ## Oturum 5 — 2026-11-15 (sabah, sunum öncesi) — sade ekran + 3D üs sahnesi
 
 Oyun kuralları, içerik sayıları, veri, çekirdek ve Kara Kutu değişmedi. Denge testleri aynı sonuçla geçiyor.
