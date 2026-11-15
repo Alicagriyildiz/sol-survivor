@@ -216,7 +216,7 @@ export const en: Lang = {
     hint: {
       wipe: 'Press and hold: clean.',
       patch: 'Press and hold: tape it or patch it.',
-      replace: 'Press and hold: take out the old part, put in the new one.',
+      replace: 'Press and hold: put the parts in place.',
       switch: 'Press and hold: turn the switch.',
       plug: 'Press and hold: plug in the cable.',
       dig: 'Press and hold: shovel.',

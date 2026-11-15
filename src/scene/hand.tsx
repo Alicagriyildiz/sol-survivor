@@ -63,7 +63,7 @@ export function Hand({ rt }: { rt: MutableRefObject<RT> }) {
     const walking = !!R.walk;
     const sway = walking ? Math.sin(t * 9) * 0.014 : Math.sin(t * 1.3) * 0.005;
     // Rest pose: lower right of the view.
-    tmp.off.set(0.28 + sway, -0.29 + Math.abs(sway) * 0.6, -0.55);
+    tmp.off.set(0.31 + sway, -0.31 + Math.abs(sway) * 0.6, -0.6);
     const doing = active && active.phase === 'do';
     const working = doing && (active.holding || active.mode === 'auto');
     let reach = 0;

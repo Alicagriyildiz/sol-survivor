@@ -227,7 +227,7 @@ export const tr = {
     hint: {
       wipe: 'Basılı tut: temizle.',
       patch: 'Basılı tut: bantla ya da yama yap.',
-      replace: 'Basılı tut: eski parçayı çıkar, yenisini tak.',
+      replace: 'Basılı tut: parçaları yerine tak.',
       switch: 'Basılı tut: düğmeyi çevir.',
       plug: 'Basılı tut: kabloyu tak.',
       dig: 'Basılı tut: kürekle.',
