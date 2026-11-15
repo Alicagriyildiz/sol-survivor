@@ -693,8 +693,8 @@ export function Play({
           </div>
         }
       />
-      <Warnings s={s} />
       <div className="play-top">
+        <Warnings s={s} />
         <MissionBar s={s} level={level} info={info} open={openStation} endDay={endDay} coach={step === 'done' ? bubble() : null} />
         {last && !run && <LastActionLine last={last} onClose={clearLast} />}
       </div>
