@@ -250,13 +250,26 @@ const MATERIAL_COLORS: Record<string, number> = {
 };
 
 export type ModelName =
-  | 'rock_largeA' | 'rock_largeB' | 'rocks_smallA' | 'rocks_smallB' | 'craterLarge' | 'crater'
-  | 'satelliteDish_detailed' | 'satelliteDish_large' | 'machine_generator' | 'machine_generatorLarge'
-  | 'machine_barrel' | 'machine_barrelLarge' | 'machine_wireless' | 'machine_wirelessCable' | 'barrels' | 'barrel'
-  | 'desk_computer' | 'desk_computerScreen' | 'desk_computerCorner' | 'desk_chair'
-  | 'pipe_straight' | 'pipe_corner' | 'pipe_ring' | 'pipe_end' | 'pipe_split' | 'pipe_cross' | 'chimney_detailed'
-  | 'rover' | 'platform_large' | 'rocket_baseA' | 'rocket_fuelA' | 'rocket_topA' | 'rocket_sidesA' | 'rocket_finsA'
-  | 'supports_high' | 'supports_low' | 'gate_complex' | 'structure_detailed' | 'hangar_roundGlass' | 'craft_cargoA';
+  | 'rock_largeA'
+  | 'rock_largeB'
+  | 'rocks_smallA'
+  | 'rocks_smallB'
+  | 'craterLarge'
+  | 'crater'
+  | 'satelliteDish_detailed'
+  | 'machine_generator'
+  | 'machine_generatorLarge'
+  | 'machine_barrel'
+  | 'machine_barrelLarge'
+  | 'machine_wireless'
+  | 'machine_wirelessCable'
+  | 'barrels'
+  | 'barrel'
+  | 'desk_chair'
+  | 'pipe_ring'
+  | 'chimney_detailed'
+  | 'supports_low'
+  | 'craft_cargoA';
 
 function ModelInner({ name, tint, shadows }: { name: ModelName; tint?: Partial<Record<string, number>>; shadows: boolean }) {
   const gltf = useLoader(GLTFLoader, `${MODEL_BASE}${name}.glb`);
