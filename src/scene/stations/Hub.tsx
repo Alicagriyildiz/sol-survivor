@@ -313,9 +313,9 @@ export default function Hub({ rt, work }: StationProps) {
   return (
     <group>
       {/* Cabinet with framed panels. */}
-      <RBox size={[2.5, 2.5, 0.5]} position={[0, 1.25, WALL_Z]} color={0x8d96ad} />
-      <RBox size={[2.36, 0.06, 0.04]} position={[0, 1.95, FRONT]} r={0.01} color={colorHex.hullDark} />
-      <RBox size={[2.36, 0.06, 0.04]} position={[0, 0.85, FRONT]} r={0.01} color={colorHex.hullDark} />
+      <RBox size={[2.5, 2.5, 0.5]} position={[0, 1.25, WALL_Z]} color={0x5a6582} />
+      <RBox size={[2.36, 0.06, 0.04]} position={[0, 1.95, FRONT]} r={0.01} color={colorHex.accent} />
+      <RBox size={[2.36, 0.06, 0.04]} position={[0, 0.85, FRONT]} r={0.01} color={colorHex.accent} />
       {/* Fan housing (top). */}
       <RBox size={[1.3, 0.42, 0.06]} r={0.02} position={[FAN[0], FAN[1], FRONT + 0.01]} color={0x3a4157} />
       {[-0.4, 0, 0.4].map((x) => (
