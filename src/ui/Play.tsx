@@ -19,10 +19,35 @@ import type { Action, GameState, Invalid, ResourceId } from '../sim/types';
 import { DeltaList, fmtHours, Inventory, TopBar, Warnings, type Level } from './parts';
 import { stationInfo, type StationInfo } from './stationInfo';
 import { markSceneBroken, SceneBoundary, sceneBroken, webglAvailable, type View } from './view';
-import { sceneLook } from '../scene/look';
+import { sceneLook, workLook } from '../scene/look';
+import { optionAction, routineAction, type ActionKind } from '../content/actions';
+import type { SceneRun } from '../scene/FirstPerson';
 
-// The 3D scene is a separate chunk, loaded only when the 3D view is on.
-const Scene3D = lazy(() => import('../scene/Scene3D'));
+// The first-person 3D scene is a separate chunk, loaded only when the 3D view is on.
+const FirstPerson = lazy(() => import('../scene/FirstPerson'));
+
+/** A choice being acted out in the 3D view. The game step has already happened. */
+interface PlayRun {
+  id: number;
+  before: GameState;
+  kind: ActionKind;
+  station: string;
+  label: string;
+}
+let runIds = 0;
+const stationOf = (faultId: string) => engine.fault(faultId).station;
+
+function runFor(s: GameState, a: Action): PlayRun | null {
+  if (a.type === 'resolve') {
+    const o = engine.option(a.faultId, a.optionId);
+    return { id: ++runIds, before: s, kind: optionAction(a.faultId, a.optionId), station: o.station ?? engine.fault(a.faultId).station, label: optionLabel(a.faultId, a.optionId) };
+  }
+  if (a.type === 'routine') {
+    const r = engine.routine(a.routineId);
+    return { id: ++runIds, before: s, kind: routineAction(a.routineId), station: r.station, label: tr.routines[a.routineId]!.label };
+  }
+  return null;
+}
 
 /** The last action and the states around it, for the "what just happened" line. */
 export interface LastAction {
@@ -183,7 +208,9 @@ function StationPanel({
   act,
   open,
   close,
+  side = false,
 }: {
+  side?: boolean;
   s: GameState;
   stationId: string;
   level: Level;
@@ -213,8 +240,8 @@ function StationPanel({
     };
   }, [stationId]);
   return (
-    <div className="panel-backdrop" onClick={close}>
-      <section className="panel" role="dialog" aria-modal="true" aria-label={st.name} onClick={(e) => e.stopPropagation()}>
+    <div className={side ? 'panel-dock' : 'panel-backdrop'} onClick={side ? undefined : close}>
+      <section className={`panel ${side ? 'side-panel' : ''}`} role="dialog" aria-modal={!side} aria-label={st.name} onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <h2>{st.name}</h2>
           <button ref={closeRef} className="btn ghost" onClick={close} aria-label={tr.ui.close}>
@@ -511,6 +538,15 @@ export function Play({
   /** 3D view: the station the astronaut is walking to (the panel opens on arrival). */
   const [walking, setWalking] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  /** 3D: where the camera is (may differ from the game location until an action is taken). */
+  const [viewAt, setViewAt] = useState(s.location);
+  const [run, setRun] = useState<PlayRun | null>(null);
+  const solSeen = useRef(s.sol);
+  if (solSeen.current !== s.sol) {
+    // New sol: the astronaut wakes up at home.
+    solSeen.current = s.sol;
+    setViewAt(s.location);
+  }
   const [night, setNight] = useState(false);
   const [sceneFailed, setSceneFailedState] = useState(sceneBroken);
   const setSceneFailed = (v: boolean) => {
@@ -551,15 +587,19 @@ export function Play({
     ) : null;
   const coachStation = step === 'goHub' ? 'hub' : step === 'seal' && open !== 'airlock' ? 'airlock' : null;
 
-  const busy = night || walking !== null;
+  const busy = night || walking !== null || run !== null;
   const openStation = (id: string) => {
     if (busy) return;
     // 3D: walk there first, the panel opens on arrival. Already there: open right away.
-    if (use3d && !open && id !== s.location) setWalking(id);
-    else setOpen(id);
+    if (use3d && id !== viewAt) {
+      setOpen(null);
+      setWalking(id);
+    } else setOpen(id);
   };
   const doAct = (a: Action) => {
     if (busy) return;
+    // The step happens now, exactly once; the 3D view then acts it out (skippable).
+    if (use3d) setRun(runFor(s, a));
     act(a);
     setOpen(null);
     if (step && step !== 'bars' && step !== 'hours') setTutorial(step);
@@ -583,21 +623,35 @@ export function Play({
     else reallyEnd();
   };
 
+  const sceneRun: SceneRun | null = run
+    ? { id: run.id, kind: run.kind, station: run.station, label: run.label, hours: run.before.hoursLeft - s.hoursLeft, from: workLook(run.before, stationOf), to: workLook(s, stationOf) }
+    : null;
+  const endButton = m.kind !== 'done' && (
+    <button className="btn big end-btn" disabled={endLocked || busy} onClick={endDay} title={endLocked ? tr.ui.sol1Locked : undefined}>
+      🌙 {tr.ui.endSol}
+    </button>
+  );
+  const dock = (
+    <>
+      <Inventory items={s.items} />
+      {endButton}
+    </>
+  );
   const grid = <StationGrid info={info} open={openStation} coachFor={(id) => (id === coachStation ? bubble() : null)} />;
 
   return (
     <div className={`play ${use3d ? 'view-3d' : 'view-2d'}`}>
       <TopBar
-        s={s}
+        s={run ? run.before : s}
         level={level}
-        flash={last && last.action.type !== 'endSol' ? last : null}
+        flash={last && last.action.type !== 'endSol' && !run ? last : null}
         coach={step === 'bars' || step === 'hours' ? { at: step, bubble: bubble() } : null}
         extra={<ViewSwitch view={use3d ? '3d' : '2d'} setView={setView} can3d={can3d} />}
       />
       <Warnings s={s} />
       <div className="play-top">
         <MissionBar s={s} info={info} open={openStation} endDay={endDay} coach={step === 'done' ? bubble() : null} />
-        {last && <LastActionLine last={last} onClose={clearLast} />}
+        {last && !run && <LastActionLine last={last} onClose={clearLast} />}
       </div>
       <main className="play-main">
         {use3d ? (
@@ -610,20 +664,24 @@ export function Play({
                 </div>
               }
             >
-              <Scene3D
+              <FirstPerson
                 stations={info}
-                location={s.location}
-                goal={walking ?? open ?? s.location}
+                goal={run?.station ?? walking ?? viewAt}
                 look={sceneLook(s, night)}
+                work={workLook(s, stationOf)}
+                run={sceneRun}
+                target={m.kind === 'fault' && m.fixable ? m.station : null}
                 onPick={openStation}
                 onArrive={(id) => {
+                  setViewAt(id);
                   if (walking === id) {
                     setWalking(null);
                     setOpen(id);
                   }
                 }}
-                coachStation={coachStation}
-                coach={coachStation ? bubble() : null}
+                onRunDone={(id) => setRun((cur) => (cur && cur.id === id ? null : cur))}
+                coach={coachStation || step === 'choose' ? bubble() : null}
+                dock={dock}
                 onLost={() => setSceneFailed(true)}
                 hint={sol1}
               />
@@ -635,15 +693,12 @@ export function Play({
             {grid}
           </>
         )}
-        <aside className="side">
-          <Inventory items={s.items} />
-          {m.kind !== 'done' && (
-            <button className="btn big end-btn" disabled={endLocked || busy} onClick={endDay} title={endLocked ? tr.ui.sol1Locked : undefined}>
-              🌙 {tr.ui.endSol}
-            </button>
-          )}
-          {endLocked && <p className="dim small">{tr.ui.sol1Locked}</p>}
-        </aside>
+        {!use3d && (
+          <aside className="side">
+            {dock}
+            {endLocked && <p className="dim small">{tr.ui.sol1Locked}</p>}
+          </aside>
+        )}
       </main>
       {open && (
         <StationPanel
@@ -651,7 +706,8 @@ export function Play({
           stationId={open}
           level={level}
           sol1={sol1}
-          coach={step === 'choose' ? bubble(true) : null}
+          coach={step === 'choose' && !use3d ? bubble(true) : null}
+          side={use3d}
           act={doAct}
           open={(id) => setOpen(id)}
           close={() => setOpen(null)}

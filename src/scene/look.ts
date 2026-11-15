@@ -37,3 +37,35 @@ export function sceneLook(s: GameState, night = false): SceneLook {
     night,
   };
 }
+
+// ------------------------------------------------------------------ work points
+
+/** How each station's work object looks, from the state (so results stay in later sols). */
+export interface WorkLook {
+  /** Dust on the solar panels: 0 clean, 0.5 half, 1 dusty. */
+  solarDust: number;
+  /** Life-support filter in the hub rack. */
+  filter: 'ok' | 'clogged' | 'new' | 'taped';
+  /** Open fault at a station: its warning light is red and blinking. */
+  alarm: Record<string, boolean>;
+}
+
+const HALF_DUST = /half/i;
+const FILTER_FAULTS = ['s2_filter', 's10_co2'];
+
+export function workLook(s: GameState, stationOf: (faultId: string) => string): WorkLook {
+  let solarDust = 0;
+  for (const m of s.modifiers) {
+    if (DUST_MODIFIERS.test(m.id) && (m.nightly.power ?? 0) < 0) solarDust = Math.max(solarDust, HALF_DUST.test(m.id) ? 0.5 : 1);
+  }
+  let filter: WorkLook['filter'] = 'ok';
+  for (const d of s.decisions) {
+    if (d.faultId === 's2_filter' && d.optionId === 'replace') filter = 'new';
+    if (d.faultId === 's10_co2' && d.optionId === 'adapter') filter = 'new';
+    if (d.faultId === 's10_co2' && d.optionId === 'apollo') filter = 'taped';
+  }
+  if (s.faults.some((f) => FILTER_FAULTS.includes(f.faultId))) filter = 'clogged';
+  const alarm: Record<string, boolean> = {};
+  for (const f of s.faults) alarm[stationOf(f.faultId)] = true;
+  return { solarDust, filter, alarm };
+}

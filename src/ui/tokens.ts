@@ -28,6 +28,23 @@ export const colors = {
   plant: '#4fae84',
   original: '#bcc5da',
   alt: '#38d0d6',
+  // First-person world (session 6). Pale pink-violet Mars sky, never orange.
+  skyTop: '#a995b4',
+  skyHorizon: '#d9bfb8',
+  skyStormTop: '#a8918f',
+  skyStormHorizon: '#bfa49e',
+  skyEventTop: '#8f6fa4',
+  skyEventHorizon: '#cfa2c4',
+  skyNightTop: '#0b1228',
+  skyNightHorizon: '#2b2745',
+  hull: '#dfe2ea',
+  hullDark: '#9aa1b3',
+  metal: '#6c7488',
+  panelCell: '#2f4f8f',
+  suit: '#eef0f5',
+  filterNew: '#f3f5fa',
+  filterDirty: '#6e5a57',
+  tape: '#b8c0cc',
 } as const;
 
 export type ColorName = keyof typeof colors;

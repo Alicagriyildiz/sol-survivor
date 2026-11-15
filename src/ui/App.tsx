@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { carefulBot } from '../bots/bots';
+import { createRng } from '../sim/rng';
 import type { MissionLog } from '../blackbox';
 import { DEFAULT_CONFIG, engine } from '../content';
 import type { Action, GameState } from '../sim/types';
@@ -38,14 +40,22 @@ export function App() {
     setScreen('data');
   };
 
-  const start = (seed: number, level: Level, tutorialOn: boolean) => {
-    const state = engine.init(seed, DEFAULT_CONFIG);
+  const start = (seed: number, level: Level, tutorialOn: boolean, jumpTo = 0) => {
+    let state = engine.init(seed, DEFAULT_CONFIG);
+    const actions: Action[] = [];
+    // Dev only: let the careful bot play up to sol `jumpTo` (screenshots, testing).
+    const rng = createRng(seed);
+    while (jumpTo > state.sol && !state.outcome) {
+      const a = carefulBot(state, engine, rng);
+      actions.push(a);
+      state = engine.step(state, a);
+    }
     current.current = state;
     setSession({
       seed,
       level,
       state,
-      actions: [],
+      actions,
       last: null,
       tutorial: tutorialOn ? 'bars' : null,
       tutorialOn,
@@ -65,6 +75,17 @@ export function App() {
       setScreen('end');
     }
   };
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const q = new URLSearchParams(window.location.search);
+    const sol = Number(q.get('jump'));
+    if (sol > 0) {
+      start(Number(q.get('seed')) || 1, 'junior', sol === 1, sol);
+      setScreen('play');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (screen === 'data') return <DataScreen onBack={() => setScreen(dataFrom)} />;
   if (screen === 'start' || !session) return <Start onStart={start} onData={() => openData('start')} view={view} setView={setView} />;

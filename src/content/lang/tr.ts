@@ -218,6 +218,28 @@ export const tr = {
     solar: 'Paneller',
     landing: 'İniş alanı',
   } as Record<string, string>,
+  /** First-person view: acting out a choice. */
+  act: {
+    lookHint: 'Etrafa bakmak için sürükle. Bir yere ya da alttaki düğmeye dokun: oraya yürürsün.',
+    hintWipe: 'Panelin üstünde parmağını ya da fareni sürükleyerek tozu sil!',
+    hintWait: 'Saatler geçiyor. Bu sefer hiçbir şey yapılmıyor.',
+    hint: {
+      wipe: 'Basılı tut: temizle.',
+      patch: 'Basılı tut: bantla, yamala.',
+      replace: 'Basılı tut: eski parçayı çıkar, yenisini tak.',
+      switch: 'Basılı tut: çevir.',
+      plug: 'Basılı tut: kabloyu tak.',
+      dig: 'Basılı tut: kürekle.',
+      console: 'Basılı tut: yaz.',
+      wait: 'Saatler geçiyor.',
+    } as Record<string, string>,
+    hold: 'Basılı tut',
+    auto: 'Kendisi yapsın',
+    autoDoing: 'Astronot işi yapıyor…',
+    skip: 'Atla',
+    going: 'İş yerine gidiliyor…',
+    done: 'Bitti',
+  },
   routines: {
     tend: { label: 'Bitkilere bak', why: 'Bitkiler büyüdükçe Yaşam Desteği artar. Lambalar biraz Güç yer.' },
     tune: { label: 'Bataryaları ayarla', why: 'Ayarlı batarya enerjiyi daha iyi saklar: Güç artar.' },

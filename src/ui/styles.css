@@ -313,3 +313,76 @@ a { color: var(--c-accent); }
   .data-row.head { display: none; }
   .mlabel { display: inline; }
 }
+
+/* ---------------------------------------------------------------- first-person 3D (session 6) */
+.play.view-3d .play-main { grid-template-columns: 1fr; padding-top: 0.6rem; }
+.fp { position: relative; }
+.fp-canvas {
+  position: relative; height: clamp(360px, calc(100vh - 250px), 820px); border-radius: 16px; overflow: hidden;
+  border: 2px solid var(--c-border); background: var(--c-sky-horizon); touch-action: none; user-select: none; cursor: grab;
+}
+.fp-canvas:active { cursor: grabbing; }
+.fp.night .fp-canvas { background: var(--c-night); }
+/* Helmet visor: soft dark rim and a faint glass sheen. Never blocks clicks. */
+.fp-visor {
+  position: absolute; inset: 0; pointer-events: none; z-index: 1; border-radius: 16px;
+  background:
+    radial-gradient(ellipse 120% 105% at 50% 48%, transparent 62%, rgba(12, 18, 36, 0.35) 80%, rgba(12, 18, 36, 0.85) 100%),
+    linear-gradient(125deg, rgba(255, 255, 255, 0.07) 0%, transparent 28%);
+  box-shadow: inset 0 0 0 3px rgba(56, 208, 214, 0.12);
+}
+.fp-label {
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto; cursor: pointer; white-space: nowrap; transform-origin: 50% 100%;
+  display: flex; gap: 0.3rem; align-items: center; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.95rem; font-weight: 600;
+  background: rgba(21, 29, 54, 0.82); color: var(--c-text); border: 2px solid var(--c-border); box-shadow: 0 2px 8px rgba(5, 10, 25, 0.4);
+}
+.fp-label.has-fault { border-color: var(--c-warn); }
+.fp-label.locked { opacity: 0.8; }
+.fp-fault { color: #1d2030; background: var(--c-warn); border-radius: 999px; padding: 0 0.4rem; animation: bob 1s ease-in-out infinite; display: inline-block; }
+.fp-ok { color: var(--c-ok); }
+.fp-routine { color: var(--c-accent); }
+.fp-arrow {
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+}
+.fp-arrow-icon { font-size: 2rem; color: var(--c-warn); text-shadow: 0 0 6px rgba(10, 15, 30, 0.9); display: inline-block; animation: pulseA 1.2s ease-in-out infinite; }
+.fp-arrow-name { font-size: 0.8rem; font-weight: 700; background: rgba(21, 29, 54, 0.85); padding: 0 0.4rem; border-radius: 6px; border: 1px solid var(--c-warn); }
+@keyframes pulseA { 50% { opacity: 0.55; } }
+.fp-coach { position: absolute; left: 12px; top: 12px; z-index: 3; max-width: min(320px, 70%); }
+.fp-coach .coach-bubble { position: relative; top: 0; left: 0; }
+.fp-coach .coach-bubble::before { display: none; }
+.fp-hint { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 2; margin: 0; padding: 0.2rem 0.6rem; border-radius: 8px; background: rgba(21, 29, 54, 0.78); color: var(--c-text); pointer-events: none; text-align: center; max-width: 90%; }
+.fp-run {
+  position: absolute; left: 12px; top: 12px; z-index: 4; width: min(340px, calc(100% - 24px));
+  background: rgba(21, 29, 54, 0.9); border: 2px solid var(--c-accent); border-radius: 14px; padding: 0.6rem 0.8rem; display: grid; gap: 0.4rem;
+  box-shadow: 0 6px 20px rgba(5, 10, 25, 0.5); cursor: default;
+}
+.fp-run.finish { border-color: var(--c-ok); }
+.fp-run-title { font-size: 1.05rem; }
+.fp-run-hint { margin: 0; color: var(--c-text-dim); }
+.fp-run-done { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--c-ok); display: flex; gap: 0.5rem; align-items: center; }
+.fp-run-done .chip-cost { color: var(--c-text); animation: costIn 0.5s ease-out; }
+@keyframes costIn { from { transform: scale(1.6); } }
+.fp-progress { height: 10px; border-radius: 999px; background: var(--c-surface); overflow: hidden; border: 1px solid var(--c-border); }
+.fp-progress > div { height: 100%; width: 0; background: var(--c-accent); }
+.fp-run-btns .btn { touch-action: none; }
+.fp-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; justify-content: center; align-items: center; gap: 0.6rem; padding: 10px 12px; pointer-events: none; }
+.fp-dock > * { pointer-events: auto; }
+.fp-dock .inv { background: rgba(21, 29, 54, 0.85); }
+.fp-dock .end-btn { width: auto; }
+.fp-stations { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.fp-st { font: inherit; font-size: 0.9rem; background: var(--c-surface2); color: var(--c-text); border: 1px solid var(--c-border); border-radius: 999px; padding: 0.25rem 0.7rem; cursor: pointer; }
+.fp-st.has-fault { border-color: var(--c-warn); }
+.fp-st.target { outline: 2px solid var(--c-warn); }
+.fp-st:focus-visible { outline: 3px solid var(--c-accent); }
+.fp-st:disabled { opacity: 0.5; cursor: default; }
+/* Station panel docked at the side in 3D: the world stays visible. */
+.panel-dock { position: fixed; right: 12px; top: 96px; bottom: 12px; z-index: 10; width: min(400px, calc(100vw - 24px)); display: flex; pointer-events: none; }
+.panel.side-panel { pointer-events: auto; width: 100%; max-height: 100%; overflow-y: auto; padding: 0.8rem 0.9rem; background: rgba(29, 39, 69, 0.96); }
+.panel.side-panel .option { padding: 0.6rem; }
+@media (max-width: 640px) {
+  .fp-canvas { height: clamp(320px, calc(100vh - 300px), 640px); }
+  .panel-dock { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 56vh; }
+  .fp-run { top: 6px; left: 6px; width: calc(100% - 12px); padding: 0.4rem 0.6rem; }
+  .fp-label { font-size: 0.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { .fp-fault, .fp-arrow-icon { animation: none !important; } }
