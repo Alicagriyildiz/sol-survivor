@@ -1,6 +1,7 @@
 // Everything the player sees about the real NASA data: the sol 12 event card, the space
 // weather line, the 2018 storm line, study notes, the dose comparison and the "Data" screen.
 // Values come from content/data.ts (snapshot files); the game never goes online.
+import { Icon } from './icons';
 import { SOURCES, data, fmt, numLocale, tr } from '../content';
 import type { GameState } from '../sim/types';
 import { fmtDate, fmtNum, mGy } from './parts';
@@ -67,8 +68,11 @@ export function StudyLine({ sol }: { sol: number }) {
   const text = tr.study[`s${sol}`];
   if (!st || !text) return null;
   return (
-    <p className="small data-line">
-      🔬 <strong>{tr.study.label}:</strong> {text}{' '}
+    <p className="small data-line study-note">
+      <span className="note-tag">
+        <Icon name="flask" size={15} /> {tr.study.label}
+      </span>{' '}
+      {text}{' '}
       <span className="dim">
         (NASA OSDR{' '}
         <a href={st.url} target="_blank" rel="noopener noreferrer">

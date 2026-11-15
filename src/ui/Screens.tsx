@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
 import { SOURCES, engine, extra, fmt, numSuffix, tr } from '../content';
 import { activeNotes, reservesUsed, score, solReportRows, todayFaults, type ReportRow, type ReportSection } from '../sim/selectors';
@@ -9,6 +9,7 @@ import { LangSwitch } from './LangSwitch';
 import { Chart, DeltaList, fmtMGy, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
 import { webglAvailable, type View } from './view';
+import { Icon } from './icons';
 
 const Backdrop = lazy(() => import('../scene/Backdrop'));
 
@@ -160,27 +161,38 @@ export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
         {tr.ui.sol} {s.sol} {tr.ui.of} {s.config.solCount} · {tr.ui.briefing}
       </p>
       <h1>{t.title}</h1>
-      <div className="card">
-        <h3>🌤 {tr.ui.weather}</h3>
-        <p>{t.weather}</p>
-        {storm && <p className="note danger small">🔒 {tr.ui.briefingStorm}</p>}
-        <SpaceWeatherLine s={s} />
-        <StormLine sol={s.sol} />
-      </div>
       <div className="card today-card">
-        <h3>🎯 {tr.ui.briefingToday}</h3>
+        <h3>
+          <Icon name="target" /> {tr.ui.briefingToday}
+        </h3>
         <ul className="today">
           {faults.map((f) => (
             <li key={f.faultId}>
-              ⚠ <strong>{faultTitle(f.faultId)}</strong> <span className="dim">· 📍 {tr.stations[f.station]!.name}</span>
+              <span className="today-fault">
+                <Icon name="alert" /> <strong>{faultTitle(f.faultId)}</strong>
+              </span>
+              <span className="today-place">
+                <Icon name="pin" size={16} /> {tr.stations[f.station]!.name}
+              </span>
               {f.returning && <span className="badge">{tr.ui.returning}</span>}
             </li>
           ))}
         </ul>
       </div>
+      <div className="card">
+        <h3>
+          <Icon name="sun" /> {tr.ui.weather}
+        </h3>
+        <p>{t.weather}</p>
+        {storm && <p className="note danger small"><Icon name="lock" size={15} /> {tr.ui.briefingStorm}</p>}
+        <SpaceWeatherLine s={s} />
+        <StormLine sol={s.sol} />
+      </div>
       {notes.length > 0 && (
         <div className="card chain-card">
-          <h3>🔗 {tr.ui.briefingChain}</h3>
+          <h3>
+            <Icon name="link" /> {tr.ui.briefingChain}
+          </h3>
           {notes.map((n) => (
             <p key={n} className="small">
               {tr.chain[n]}
@@ -189,7 +201,9 @@ export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
         </div>
       )}
       <div className="card message">
-        <h3>📡 {tr.ui.earthMessage}</h3>
+        <h3>
+          <Icon name="signal" /> {tr.ui.earthMessage}
+        </h3>
         <p className="quote">“{t.message}”</p>
         <p className="dim small">{tr.ui.earthDelay}</p>
       </div>
@@ -244,8 +258,10 @@ function rowText(s: GameState, r: ReportRow): { label: string; reason: string | 
 export function RealNote({ sol }: { sol: number }) {
   const src = SOURCES.find((x) => x.sol === sol);
   return (
-    <div className="card real">
-      <h3>📚 {tr.ui.whatReallyHappened}</h3>
+    <div className="card real note-card">
+      <p className="note-tag">
+        <Icon name="book" size={15} /> {tr.ui.whatReallyHappened}
+      </p>
       <p>{tr.notes[sol]}</p>
       {src && (
         <p className="dim small">
@@ -273,51 +289,138 @@ export function SolReport({ s, sol, level, onNext }: { s: GameState; sol: number
   const change: Deltas = {};
   for (const r of RESOURCES) change[r] = Math.round((now.res[r] - prev.res[r]) * 10) / 10;
   change.health = Math.round((now.health - prev.health) * 10) / 10;
+  const top = [...RESOURCES, 'health' as const]
+    .map((k) => ({ k, from: k === 'health' ? prev.health : prev.res[k], to: k === 'health' ? now.health : now.res[k], d: change[k] ?? 0 }))
+    .sort((x, y) => Math.abs(y.d) - Math.abs(x.d))
+    .slice(0, 3);
   return (
     <div className="screen report">
-      <p className="dim">
-        {tr.ui.sol} {sol} · {tr.ui.report}
-      </p>
-      <h1>{tr.sols[sol]?.title}</h1>
-      <div className="card">
-        <h3>
-          {tr.ui.changes} ({tr.ui.sol} {sol})
-        </h3>
-        <DeltaList d={change} level={level} />
+      <div className="card report-hero">
+        <p className="report-kicker">{tr.ui.report}</p>
+        <h1 className="report-sol">
+          {tr.ui.sol} {sol}
+        </h1>
+        <p className="report-title">{tr.sols[sol]?.title}</p>
+        <SolStrip />
+        <ul className="report-top">
+          {top.map((t) => (
+            <GaugeChange key={t.k} k={t.k} from={t.from} to={t.to} d={t.d} />
+          ))}
+        </ul>
+        {sol === s.config.solCount && s.outcome?.won && <p className="lead">{tr.ui.finalDay}</p>}
+        <button className="btn primary big" onClick={onNext} autoFocus>
+          {s.outcome ? tr.ui.finalStats : tr.ui.nextSol} →
+        </button>
       </div>
-      {sol === s.config.solCount && s.outcome?.won && <p className="lead">{tr.ui.finalDay}</p>}
-      {sections.map((sec) => (
-        <div key={sec} className="card">
-          <h3>
-            {sectionTitle(sec)}
-            {sec === 'morning' && ` (${tr.ui.sol} ${sol + 1})`}
-          </h3>
-          <ul className="report-list">
-            {rows
-              .filter((r) => r.section === sec)
-              .map((r) => {
-                const t = rowText(s, r);
-                return (
-                  <li key={`${r.section}|${r.key}`} className={r.source.kind === 'reserve' ? 'reserve-row' : ''}>
-                    <div className="row between wrap">
-                      <strong>
-                        {r.source.kind === 'reserve' ? '🔋 ' : ''}
-                        {t.label}
-                      </strong>
-                      <DeltaList d={r.deltas} level={level} />
-                    </div>
-                    {t.reason && <div className="dim small">{t.reason}</div>}
-                  </li>
-                );
-              })}
-          </ul>
-        </div>
-      ))}
+      <details className="card report-more">
+        <summary>
+          {tr.ui.changes} ({tr.ui.sol} {sol})
+        </summary>
+        <DeltaList d={change} level={level} />
+        {sections.map((sec) => (
+          <div key={sec} className="report-sec">
+            <h3>
+              {sectionTitle(sec)}
+              {sec === 'morning' && ` (${tr.ui.sol} ${sol + 1})`}
+            </h3>
+            <ul className="report-list">
+              {rows
+                .filter((r) => r.section === sec)
+                .map((r) => {
+                  const t = rowText(s, r);
+                  return (
+                    <li key={`${r.section}|${r.key}`} className={r.source.kind === 'reserve' ? 'reserve-row' : ''}>
+                      <div className="row between wrap">
+                        <strong>
+                          {r.source.kind === 'reserve' ? '🔋 ' : ''}
+                          {t.label}
+                        </strong>
+                        <DeltaList d={r.deltas} level={level} />
+                      </div>
+                      {t.reason && <div className="dim small">{t.reason}</div>}
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        ))}
+      </details>
       <RealNote sol={sol} />
-      <button className="btn primary big" onClick={onNext}>
-        {s.outcome ? tr.ui.finalStats : tr.ui.nextSol} →
-      </button>
     </div>
+  );
+}
+
+/** Day -> night -> morning: the sun sets on the left, stars in the middle, sunrise on the right. */
+function SolStrip() {
+  return (
+    <svg className="sol-strip" viewBox="0 0 640 36" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      <defs>
+        <linearGradient id="solstrip" x1="0" x2="1">
+          <stop offset="0" stopColor={colors.skyHorizon} />
+          <stop offset="0.3" stopColor={colors.skyTop} />
+          <stop offset="0.5" stopColor={colors.skyNightTop} />
+          <stop offset="0.72" stopColor={colors.skyTop} />
+          <stop offset="1" stopColor={colors.skyHorizon} />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="640" height="36" rx="6" fill="url(#solstrip)" />
+      <circle className="sol-strip-sun" cx="56" cy="22" r="8" fill="#f6f2ef" />
+      {[[240, 10], [262, 24], [284, 8], [306, 18], [330, 11], [352, 25], [376, 9], [398, 19], [418, 12]].map(([x, y]) => (
+        <circle key={x} cx={x} cy={y} r="1.2" fill="#e9eefa" className="sol-strip-star" />
+      ))}
+      <circle className="sol-strip-rise" cx="590" cy="26" r="7" fill="#f6f2ef" />
+    </svg>
+  );
+}
+
+function useCountUp(from: number, to: number, ms = 650) {
+  const [v, setV] = useState(from);
+  useEffect(() => {
+    let still = false;
+    try {
+      still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      // keep animation
+    }
+    if (still || from === to) {
+      setV(to);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / ms);
+      setV(from + (to - from) * (1 - (1 - k) * (1 - k)));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to, ms]);
+  return v;
+}
+
+/** One gauge: old value as a faint bar, new value on top; "70 → 62" and the signed change in words-free
+ *  numbers, coloured (teal better, rose worse, grey none) and marked with a sign so colour is not the only cue. */
+function GaugeChange({ k, from, to, d }: { k: (typeof RESOURCES)[number] | 'health'; from: number; to: number; d: number }) {
+  const v = useCountUp(from, to);
+  const kind = d > 0.05 ? 'up' : d < -0.05 ? 'down' : 'same';
+  const label = k === 'health' ? tr.res.health : tr.res[k];
+  return (
+    <li className={`gauge-change ${kind}`}>
+      <div className="gauge-change-head">
+        <span className="gauge-change-name">
+          {resourceIcon[k]} {label}
+        </span>
+        <span className="gauge-change-nums">
+          {fmtNum(from, 0)} → <strong>{fmtNum(v, 0)}</strong>
+          <span className="gauge-change-d">{kind === 'same' ? '±0' : `${d > 0 ? '+' : '−'}${fmtNum(Math.abs(d), 0)}`}</span>
+        </span>
+      </div>
+      <div className="gauge-change-bar">
+        <span className="was" style={{ width: `${Math.max(0, Math.min(100, from))}%` }} />
+        <span className="now" style={{ width: `${Math.max(0, Math.min(100, v))}%` }} />
+      </div>
+    </li>
   );
 }
 
@@ -339,7 +442,9 @@ export function End({
   const o = s.outcome!;
   return (
     <div className="screen end">
-      <h1>{o.won ? `🎉 ${tr.ui.missionWon}` : `🛑 ${tr.ui.missionLost}`}</h1>
+      <h1 className={`end-title ${o.won ? 'won' : 'lost'}`}>
+        <Icon name={o.won ? 'check' : 'stop'} size={30} /> {o.won ? tr.ui.missionWon : tr.ui.missionLost}
+      </h1>
       {!o.won && o.cause && (
         <p className="lead">
           {tr.ui.lostBecause} <strong>{tr.causeName[o.cause]}</strong> ({tr.ui.sol} {o.sol})
@@ -347,9 +452,10 @@ export function End({
       )}
       {/* The Black Box is the main next step: first, big, with one line saying what it does. */}
       <div className="card end-next">
-        <p className="end-invite">🔍 {o.won ? tr.ending.inviteWon : tr.ending.invite}</p>
+        <p className="end-invite">
+          <Icon name="search" /> {o.won ? tr.ending.inviteWon : tr.ending.invite}</p>
         <button className="btn primary big" onClick={onBlackBox} autoFocus>
-          ⬛ {tr.ui.openBlackBox} →
+          <Icon name="box" /> {tr.ui.openBlackBox} →
         </button>
         <p className="lead">{extra.blackBoxLead}</p>
         {level === 'junior' && <p className="dim small">{tr.blackbox.intro}</p>}

@@ -1,3 +1,4 @@
+import { Icon } from './icons';
 import { useMemo, useState } from 'react';
 import {
   alternatives,
@@ -76,7 +77,9 @@ export function BlackBox({ log, final, level, onBack }: { log: MissionLog; final
   return (
     <div className="screen blackbox">
       <div className="row between">
-        <h1>⬛ {tr.blackbox.title}</h1>
+        <h1 className="end-title">
+          <Icon name="box" size={28} /> {tr.blackbox.title}
+        </h1>
         <button className="btn ghost" onClick={onBack}>
           ← {tr.blackbox.back}
         </button>
@@ -105,7 +108,7 @@ export function BlackBox({ log, final, level, onBack }: { log: MissionLog; final
             ))}
           </ol>
           <button className="btn" onClick={() => setRescues(findRescues(engine, log))}>
-            🔍 {tr.blackbox.findRescues}
+            <Icon name="search" /> {tr.blackbox.findRescues}
           </button>
           {rescues && (
             <div className="rescues">

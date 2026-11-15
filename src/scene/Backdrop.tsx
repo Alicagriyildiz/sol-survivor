@@ -73,15 +73,16 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   }
 }
 
-export default function Backdrop() {
+/** `soft`: blurred background behind the text screens; lower resolution, no shadows (the CSS blurs it anyway). */
+export default function Backdrop({ soft = false }: { soft?: boolean }) {
   const rt = useRef<RT>(stubRT());
-  const quality = useMemo(detectQuality, []);
+  const quality = useMemo<Quality>(() => (soft ? 'low' : detectQuality()), [soft]);
   return (
     <Boundary>
       <Canvas
         className="title-canvas"
         shadows={quality === 'high' ? { type: THREE.PCFShadowMap } : false}
-        dpr={quality === 'high' ? [1, 1.5] : [1, 1.25]}
+        dpr={soft ? 0.5 : quality === 'high' ? [1, 1.5] : [1, 1.25]}
         gl={{ antialias: true, powerPreference: 'default', alpha: false }}
         camera={{ fov: 50, near: 0.1, far: 800, position: [30, 5, 20] }}
       >

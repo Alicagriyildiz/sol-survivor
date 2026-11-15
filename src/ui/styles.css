@@ -630,3 +630,87 @@ a { color: var(--c-accent); }
   .title-corner { top: 12px; right: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .title-start { transition: none; } }
+
+/* ---------------------------------------------------------------- text screens over the world (session 7)
+   Briefing, report, end, Black Box and data screens: the base scene blurred behind (or a sky-coloured
+   gradient), lighter cards with a thin edge, one focus per screen, soft entrance. */
+.screen-bg { position: fixed; inset: 0; z-index: 0; background: linear-gradient(180deg, #1c2550 0%, #2d2a5a 48%, #4a3a63 78%, #5d4766 100%); }
+.screen-bg-3d { position: absolute; inset: -24px; filter: blur(7px) saturate(1.1); }
+.screen-bg-3d canvas { display: block; }
+.screen-bg-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14, 19, 40, 0.72) 0%, rgba(14, 19, 40, 0.5) 45%, rgba(14, 19, 40, 0.68) 100%); }
+.paged { position: relative; z-index: 1; min-height: 100vh; }
+.paged .screen { padding-top: 2rem; }
+.paged .screen > * { animation: screenIn 0.28s ease-out both; }
+.paged .screen > *:nth-child(2) { animation-delay: 0.04s; }
+.paged .screen > *:nth-child(3) { animation-delay: 0.08s; }
+.paged .screen > *:nth-child(n + 4) { animation-delay: 0.12s; }
+@keyframes screenIn { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .paged .screen > * { animation: none; } }
+.paged .card {
+  background: rgba(46, 58, 98, 0.82); border: 1px solid rgba(178, 196, 235, 0.24); border-radius: 10px;
+  padding: 1.05rem 1.25rem; box-shadow: 0 10px 30px rgba(6, 10, 26, 0.35); backdrop-filter: blur(6px);
+}
+.paged .card .card { background: transparent; border: 0; box-shadow: none; padding: 0; backdrop-filter: none; }
+.paged h1 { font-size: 2rem; letter-spacing: 0.005em; }
+.paged h3 { display: flex; align-items: center; gap: 0.45rem; font-size: 1.05rem; color: #e8ecf6; }
+.paged .icon { flex: none; color: var(--c-accent); vertical-align: -3px; }
+.paged p, .paged li { max-width: 62ch; }
+.paged .dim { color: #b9c1d6; }
+/* Briefing: today's problems and places are the focus. */
+.paged .today-card { border-color: rgba(56, 208, 214, 0.55); border-left: 4px solid var(--c-accent); }
+.paged .today-card h3 { font-size: 1.15rem; }
+.paged .today { list-style: none; padding: 0; margin: 0.2rem 0 0; display: grid; gap: 0.55rem; }
+.paged .today li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; font-size: 1.15rem; }
+.today-fault { display: inline-flex; align-items: center; gap: 0.4rem; }
+.today-fault .icon { color: var(--c-warn); }
+.today-place { display: inline-flex; align-items: center; gap: 0.3rem; color: #c9d1e4; font-size: 1rem; }
+/* Real-event and NASA-study notes: thin coloured edge and a small tag with the source. */
+.paged .note-card { border-left: 3px solid #b98ab8; }
+.note-tag {
+  display: inline-flex; align-items: center; gap: 0.3rem; margin: 0 0 0.4rem; font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: #d9b8e0;
+}
+.note-tag .icon { color: #d9b8e0 !important; }
+.study-note { border-left: 2px solid rgba(56, 208, 214, 0.6); padding-left: 0.7rem; margin-top: 0.8rem; }
+.study-note .note-tag, .study-note .note-tag .icon { color: var(--c-accent) !important; }
+/* Sol report: one moment. */
+.report-hero { text-align: left; }
+.report-kicker { margin: 0; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b9c1d6; }
+.paged .report-sol { margin: 0; font-size: clamp(2.6rem, 6vw, 3.6rem); font-weight: 900; line-height: 1; }
+.report-title { margin: 0.2rem 0 0.8rem; font-size: 1.1rem; color: #dfe4f0; }
+.sol-strip { display: block; width: 100%; height: 30px; margin-bottom: 0.9rem; border-radius: 6px; }
+.sol-strip-sun { animation: sunSet 0.9s ease-out both; }
+.sol-strip-rise { animation: sunRise 0.9s 0.3s ease-out both; }
+@keyframes sunSet { from { transform: translateY(-8px); } }
+@keyframes sunRise { from { transform: translateY(10px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sol-strip-sun, .sol-strip-rise { animation: none; } }
+.paged .report-top li { max-width: none; }
+.paged .btn .icon { color: inherit; vertical-align: -3px; }
+.report-top { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: 0.7rem; }
+.gauge-change-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; font-size: 1.02rem; }
+.gauge-change-name { font-weight: 700; }
+.gauge-change-nums { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gauge-change-d { display: inline-block; min-width: 3.2em; margin-left: 0.6rem; padding: 0 0.35rem; border-radius: 4px; text-align: center; font-weight: 800; font-size: 0.9rem; }
+.gauge-change.up .gauge-change-d { color: #0f2a2c; background: var(--c-accent); }
+.gauge-change.down .gauge-change-d { color: #fff; background: var(--c-danger); }
+.gauge-change.same .gauge-change-d { color: #d8dce6; background: rgba(160, 170, 190, 0.35); }
+.gauge-change-bar { position: relative; height: 8px; margin-top: 0.25rem; border-radius: 4px; background: rgba(10, 15, 32, 0.6); overflow: hidden; }
+.gauge-change-bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.gauge-change-bar .was { background: rgba(200, 210, 230, 0.28); }
+.gauge-change.up .now { background: var(--c-accent); }
+.gauge-change.down .now { background: var(--c-danger); }
+.gauge-change.same .now { background: #9aa3b8; }
+.report-more summary { cursor: pointer; font-weight: 700; }
+.report-more[open] summary { margin-bottom: 0.6rem; }
+.report-sec { margin-top: 0.9rem; }
+.end-title { display: flex; align-items: center; gap: 0.6rem; }
+.end-title.won .icon { color: var(--c-ok); }
+.end-title.lost .icon { color: var(--c-danger); }
+.end-invite { display: flex; align-items: center; gap: 0.4rem; }
+@media (max-width: 640px) {
+  .paged .screen { padding-top: 1rem; }
+  .paged .card { padding: 0.85rem 0.9rem; }
+  .paged h1 { font-size: 1.6rem; }
+  .gauge-change-head { font-size: 0.95rem; }
+  .paged .today li { font-size: 1.05rem; }
+}

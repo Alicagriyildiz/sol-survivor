@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { carefulBot } from '../bots/bots';
 import { createRng } from '../sim/rng';
 import type { MissionLog } from '../blackbox';
@@ -13,7 +13,7 @@ import { DataScreen } from './DataViews';
 import { Ending } from './Ending';
 import { useLang } from './LangSwitch';
 import { Briefing, End, SolReport, Start } from './Screens';
-import { initialView, saveView, type View } from './view';
+import { initialView, saveView, webglAvailable, type View } from './view';
 
 type Screen = 'start' | 'briefing' | 'play' | 'report' | 'ending' | 'end' | 'blackbox' | 'data';
 
@@ -103,14 +103,14 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (screen === 'data') return <DataScreen onBack={() => setScreen(dataFrom)} />;
+  if (screen === 'data') return <Paged view={view}><DataScreen onBack={() => setScreen(dataFrom)} /></Paged>;
   if (screen === 'start' || !session) return <Start onStart={start} onDemo={startDemo} onData={() => openData('start')} view={view} setView={setView} />;
   const s = session.state;
   const log: MissionLog = { seed: session.seed, config: configFor(session.level), actions: session.actions };
 
   switch (screen) {
     case 'briefing':
-      return <Briefing s={s} onGo={() => setScreen('play')} />;
+      return <Paged view={view}><Briefing s={s} onGo={() => setScreen('play')} /></Paged>;
     case 'play':
       return (
         <Play
@@ -127,11 +127,12 @@ export function App() {
         />
       );
     case 'report':
-      return <SolReport s={s} sol={reportSol} level={session.level} onNext={() => setScreen(s.outcome ? 'ending' : 'briefing')} />;
+      return <Paged view={view}><SolReport s={s} sol={reportSol} level={session.level} onNext={() => setScreen(s.outcome ? 'ending' : 'briefing')} /></Paged>;
     case 'ending':
       return <Ending s={s} view={view} onDone={() => setScreen('end')} />;
     case 'end':
       return (
+        <Paged view={view}>
         <End
           s={s}
           level={session.level}
@@ -140,8 +141,32 @@ export function App() {
           onSame={() => start(session.seed, session.level, session.tutorialOn)}
           onData={() => openData('end')}
         />
+        </Paged>
       );
     case 'blackbox':
-      return <BlackBox log={log} final={s} level={session.level} onBack={() => setScreen('end')} />;
+      return <Paged view={view}><BlackBox log={log} final={s} level={session.level} onBack={() => setScreen('end')} /></Paged>;
   }
+}
+
+const Backdrop = lazy(() => import('../scene/Backdrop'));
+
+/** Text screens (briefing, report, end, Black Box, data) sit over the game's own world: the base
+ *  scene blurred and darkened, or (no 3D / "simple" view) a sky-coloured navy-to-violet gradient. */
+function Paged({ view, children }: { view: View; children: ReactNode }) {
+  const three = view === '3d' && webglAvailable();
+  return (
+    <>
+      <div className="screen-bg" aria-hidden>
+        {three && (
+          <div className="screen-bg-3d">
+            <Suspense fallback={null}>
+              <Backdrop soft />
+            </Suspense>
+          </div>
+        )}
+        <div className="screen-bg-shade" />
+      </div>
+      <div className="paged">{children}</div>
+    </>
+  );
 }
