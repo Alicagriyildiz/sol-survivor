@@ -146,9 +146,13 @@ export interface Rules {
   nightlyRadiation: number;
   shieldFactor: number;
   radHealthPerDose: number;
-  /** One-time emergency reserve per resource: the first time it drops below `threshold`,
-   *  it gains `amount`. Gives a struggling player a second chance. */
-  reserve: { threshold: number; amount: number };
+  /** Emergency reserve: the first time a resource drops below `threshold`, it gains
+   *  `amount`. Gives a struggling player a second chance, but not for free:
+   *  - `shared`: one reserve for the whole mission (any resource), else one per resource;
+   *  - `healthCost`: Health lost at once when it kicks in (cause = that resource);
+   *  - `wear`: that resource loses this much more every night for the rest of the mission
+   *    (the emergency system is worn out). */
+  reserve: { threshold: number; amount: number; shared?: boolean; healthCost?: number; wear?: number };
   /** Extra costs for any work at an EVA station. */
   eva: { hours: number; life: number; radiation: number };
 }

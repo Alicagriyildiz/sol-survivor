@@ -92,7 +92,7 @@ export const tr = {
     allSolvedToday: 'Bugünkü sorunların hepsi bitti.',
     noRoutineHere: 'Burada yapılacak bakım işi yok.',
     routineHint: 'Bakım işi boş saatlerinle bir göstergeyi biraz artırır. Her biri günde bir kez yapılır.',
-    willUseReserve: 'Acil yedek devreye girer: {res}. Bu yedek bir kez kullanılır!',
+    willUseReserve: 'Acil yedek devreye girer: {res}. Bir kez kullanılır ve sonra bu sistem her gece biraz daha hızlı yıpranır!',
     critHours: 'Kırmızıdaki göstergeler yüzünden bu saatlerde Sağlık da azalır.',
     blocksOthers: 'Dikkat: bunu yaparsan şu soruna bugün mesai kalmaz: {list}.',
     sol1Locked: 'Sol 1\'de önce iki sorunu da çöz.',
@@ -100,7 +100,7 @@ export const tr = {
     lastTitle: 'Son yaptığın',
     lastHours: '{h} sürdü',
     lastNoEffect: 'Göstergelerde hemen bir değişim olmadı.',
-    reserveNow: 'Acil yedek devreye girdi: {res} birden arttı! Bu yedek bir daha gelmez.',
+    reserveNow: 'Acil yedek devreye girdi: {res} birden arttı. Bu sistem artık her gece biraz daha hızlı yıpranacak.',
     // briefing
     briefingToday: 'Bugünün işleri',
     briefingChain: 'Geçmiş kararların bugün',
@@ -140,7 +140,7 @@ export const tr = {
     laterCostHint: 'Bugün ucuz ama sorun tam bitmiyor.',
     glossaryTitle: 'Sözlük',
     reserve: 'Acil yedek',
-    reserveUsed: 'Acil yedek devreye girdi! Bu kaynak için bir daha olmaz.',
+    reserveUsed: 'Acil yedek devreye girdi. Bu sistem artık her gece biraz daha hızlı yıpranacak.',
   },
   res: {
     power: 'Güç',
@@ -418,7 +418,7 @@ export const tr = {
   reasons: {
     night: 'Gece de ısıtıcılar Güç yer, sen hava ve su kullanırsın; soğuk ve toz duvarları aşındırır, biraz radyasyon gelir.',
     heal: 'Bütün göstergeler iyiydi: iyi dinlendin, Sağlık biraz arttı.',
-    reserve: 'Gösterge çok azaldığı için acil yedek devreye girdi. Bu her gösterge için bir kez olur.',
+    reserve: 'Gösterge çok azaldığı için acil yedek devreye girdi. Bu sistem artık her gece biraz daha hızlı yıpranacak.',
     autoDefer: 'Gün bittiğinde açıktı, kendiliğinden ertelendi.',
     youChose: 'Senin seçimin.',
     youDeferred: 'Bunu erteledin.',
@@ -461,6 +461,7 @@ export const tr = {
     leakSmall: 'Kapalı bölmeden az hava kaçıyor',
     overheat: 'Bataryalar ısınıyor',
     thickWall: 'Kalın sığınak duvarı daha az aşınıyor',
+    reserveWear: 'Acil yedekten sonra sistem daha hızlı yıpranıyor',
     night: 'Gece tüketimi',
     morning: 'Sabah olayı',
   } as Record<string, string>,

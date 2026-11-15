@@ -4,12 +4,14 @@
 //   GRID='[{}]' RESCUE=1 FORCE='[["s6_shelter","regolith"]]' npx vitest run tests/tools/search.test.ts -t "^search"
 //     ({} = current config; RESCUE prints autopilot/strict rescue, FORCE the careful bot's win rate with an option forced)
 // Knobs map to content/tuning.ts (fDefer/fQuick/fRobust/fCreative/rs) and config rules.
+import { readFileSync } from 'node:fs';
 import { it } from 'vitest';
 import { BOTS, type BotName } from '../../src/bots/bots';
 import { runBatch, seedRange } from '../../src/bots/stats';
 import { DEFAULT_CONFIG, RAW_SCENARIO, TUNING, applyTuning } from '../../src/content';
 import { createEngine } from '../../src/sim/engine';
 import type { ContentPack, Effect } from '../../src/sim/types';
+import { SOLAR_EVENTS } from '../../src/content/data';
 
 export function scaleEffects(effects: Effect[], f: number): Effect[] {
   return effects.map((e): Effect => {
@@ -42,8 +44,11 @@ export function transform(o: any): ContentPack {
 }
 
 it('search', () => {
-  if (!process.env.GRID) return;
-  const grid: any[] = JSON.parse(process.env.GRID);
+  if (!process.env.GRID && !process.env.GRID_FILE) return;
+  // GRID_FILE: one JSON config per line (for grids too big for an environment variable).
+  const grid: any[] = process.env.GRID_FILE
+    ? readFileSync(process.env.GRID_FILE, 'utf8').trim().split('\n').map((l) => JSON.parse(l))
+    : JSON.parse(process.env.GRID!);
   const n = Number(process.env.N ?? 80);
   const lines: string[] = [];
   for (const o of grid) {
@@ -69,7 +74,11 @@ it('search', () => {
           st.faults.some((x: any) => x.faultId === fid) && !e.check(st, { type: 'resolve', faultId: fid, optionId: oid })
             ? { type: 'resolve', faultId: fid, optionId: oid }
             : BOTS.careful(st, e, rr)) as any;
-        forcedTxt += ` ${fid.split('_')[0]}${oid}=${Math.round(runBatch(eng, forced, seedRange(n), cfg).winRate * 100)}`;
+        const st = runBatch(eng, forced, seedRange(n), cfg);
+        // Split by the real sol 12 event: X-class flares vs. the weaker ones.
+        const isX = (r: any) => (SOLAR_EVENTS[r.final.rolls.speEvent]?.classType ?? '').startsWith('X');
+        const rate = (rs: any[]) => Math.round((100 * rs.filter((r) => r.final.outcome.won).length) / (rs.length || 1));
+        forcedTxt += ` ${fid.split('_')[0]}${oid}=${rate(st.runs)}(X${rate(st.runs.filter(isX))}/o${rate(st.runs.filter((r) => !isX(r)))})`;
       }
     }
     let resc = '';
@@ -81,7 +90,7 @@ it('search', () => {
         Math.round((100 * lostRuns.filter((x) => findRescues(eng, { seed: x.seed, config: cfg, actions: x.actions }, auto, { firstOnly: true }).length > 0).length) / (lostRuns.length || 1));
       resc = ` rescue ${rate(BOTS.careful)}/strict ${rate(() => ({ type: 'endSol' }))}`;
     }
-    lines.push(`${resc}${forcedTxt} R${r.random}(${r.randomC}) C${r.cheapest}(${r.cheapestC}) B${r.robust}(${r.robustC}) K${r.careful}(${r.carefulC}) agg ${cs.join('/')} <- ${JSON.stringify(o)}`);
+    lines.push(`${resc}${forcedTxt} I${r.idle} R${r.random}(${r.randomC}) C${r.cheapest}(${r.cheapestC}) B${r.robust}(${r.robustC}) K${r.careful}(${r.carefulC}) agg ${cs.join('/')} <- ${JSON.stringify(o)}`);
   }
   process.stdout.write(lines.join('\n') + '\n');
 });

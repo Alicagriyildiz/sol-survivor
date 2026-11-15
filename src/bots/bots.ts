@@ -6,7 +6,7 @@ import { createRng, mixSeed, type Rng } from '../sim/rng';
 import { RESOURCES, type Action, type GameState, type MissionConfig, type OptionDef, type ResourceId } from '../sim/types';
 
 export type Policy = (s: GameState, engine: Engine, rng: Rng) => Action;
-export type BotName = 'random' | 'cheapest' | 'robust' | 'careful';
+export type BotName = 'random' | 'cheapest' | 'robust' | 'careful' | 'idle';
 
 export interface GameRun {
   seed: number;
@@ -194,9 +194,16 @@ export const carefulBot: Policy = (s, engine) => {
   return spareHours(s, engine, 'weakest');
 };
 
+// ---------------------------------------------------------------- idle
+
+/** Does nothing: ends every sol at once, so every fault is deferred. Must never win:
+ *  there is no free, safe choice. */
+export const idleBot: Policy = () => ({ type: 'endSol' });
+
 export const BOTS: Record<BotName, Policy> = {
   random: randomBot,
   cheapest: cheapestBot,
   robust: robustBot,
   careful: carefulBot,
+  idle: idleBot,
 };

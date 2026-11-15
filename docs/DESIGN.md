@@ -28,9 +28,11 @@ Kaynak `critical` (25) altındaysa her saat: `maxDamagePerHour × (25 − değer
 Her Sağlık kaybı üç nedenden birine yazılır (güç = soğuk/karanlık, yaşam = hava/su/gıda, kalkan = radyasyon). Kayıp nedeni = görev boyunca en çok Sağlık götüren neden.
 
 ### Acil yedek (toparlama şansı)
-Her kaynak için **bir kez**: kaynak ilk kez **kritik eşiğin (25) altına** düşünce +52 eklenir ve oyuncuya söylenir. Çocuk hatasını görür ve toparlanma şansı bulur. (Denge için kritik: bkz. §6.)
+Her kaynak için **bir kez**: kaynak ilk kez **kritik eşiğin (25) altına** düşünce +30 eklenir ve oyuncuya söylenir. Çocuk hatasını görür ve toparlanma şansı bulur. **Bedeli var:** o kaynak görevin geri kalanında her gece 2 puan daha fazla erir (`reserve.wear`, iz kaydında "Acil yedekten sonra sistem daha hızlı yıpranıyor"). Oyuncuya: "Acil yedek devreye girdi. Bu sistem artık her gece biraz daha hızlı yıpranacak." (Denge için kritik: bkz. §6.)
 
-**Oturum 3 kural değişikliği:** eskiden yedek 10'un altında devreye giriyordu, Sağlık ise 25'in altında azalmaya başlıyordu. Arada kalan 10-25 bandında Sağlık sessizce eriyordu; dikkatli botun kayıplarının %88'i buradan (Kalkan) geliyordu. Artık yedek eşiği kritik eşiğin kendisidir (`config.ts`: `reserve.threshold = CRITICAL`, testle bağlı). Bedeli: yedek daha erken ve daha sık tetiklenir, bu yüzden *zamanlaması* önemlidir. Yedeği erken harcayan oyuncunun fırtınada yedeği kalmayabilir (§6).
+**Oturum 4 kural değişikliği:** +52'lik bedava yedek ihmali ödüllendiriyordu. Bir kaynağı bilerek 25'in altına düşürmek kârlıydı; Sol 6'da sığınağı ertelemek (%97) güçlendirmekten (%73) iyi çıkıyordu ve Kalkan hiç kaybettirmiyordu (%0,4). Motor dört biçimi destekliyor (`Rules.reserve`): `shared` (tek ortak yedek), `amount`, `healthCost` (anında Sağlık bedeli), `wear` (kalıcı gecelik aşınma). Botlarla en az şeyi bozan biçim seçildi: kaynak başına bir kez, +30, Sağlık bedeli yok, aşınma 2.
+
+**Oturum 3 kural değişikliği (yedek eşiği):** eskiden yedek 10'un altında devreye giriyordu, Sağlık ise 25'in altında azalmaya başlıyordu. Arada kalan 10-25 bandında Sağlık sessizce eriyordu; dikkatli botun kayıplarının %88'i buradan (Kalkan) geliyordu. Artık yedek eşiği kritik eşiğin kendisidir (`config.ts`: `reserve.threshold = CRITICAL`, testle bağlı). Bedeli: yedek daha erken ve daha sık tetiklenir, bu yüzden *zamanlaması* önemlidir. Yedeği erken harcayan oyuncunun fırtınada yedeği kalmayabilir (§6).
 
 ### Radyasyon
 `radiation(x)` etkisi: alınan = `x × (1 − 0.7 × Kalkan/100)`; doz += alınan; Sağlık −= alınan × 0.6 (neden: kalkan). Her gece arka plan radyasyonu 2. EVA her dışarı çıkışta 3.
@@ -111,11 +113,15 @@ Her seçenekte çocuk dilinde "neden" metni var (`tr.faults[*].options[*].why`):
 - **random**: her arızada geçerli seçeneklerden rastgele birini seçer; boş saatlerde rastgele bakım işi yapar; her adımda %15 olasılıkla günü erken bitirir (tıklayan bir çocuk gibi).
 - **cheapest**: her arızada anlık maliyeti (saat + kaynak kaybı + parça) en düşük seçeneği seçer (çoğu zaman ertele); boş saatte en zayıf kaynağın bakımını yapar.
 - **robust**: her zaman "sağlam" türü seçer (yoksa yaratıcı, hızlı, ertele sırasıyla); boş saatte en zayıf kaynağın bakımı.
+- **idle** (Oturum 4): hiçbir şey yapmaz, her günü hemen bitirir (her sorun ertelenir). Hiç kazanmamalı: bedelsiz güvenli seçenek yok. Katı kurtarma ölçüsünde kayıt bitince bu politika uygulanır.
 - **careful**: arayüzün junior oyuncuya gösterdiğini okur: seçeneğin **anlık** etkisi + mesai + ipucu etiketleri (yatırım +, sonra-pahalı −). Gizli bilgiyi (zarlar, gecikmeli etkilerin sayısı) görmez. Boş saatte en zayıf kaynağın bakımı. Kara Kutu otomatik pilotu da budur.
   - Oturum 3 düzeltmesi: önizleme, tetiklenecek acil yedeği **kazanç saymaz** (−5 puan da "bir kez kullanılır" bedeli). Arayüz Oturum 2'den beri yedeği kazanç olarak değil, ayrı bir uyarı olarak gösteriyor; bot bununla tutarsızdı ve yedeği bilerek harcıyordu.
 
 ## 6. Denge ve ayar
-Denge botlarla ölçülür (`tests/balance.test.ts`, 1-200 tohum). Ayar düğmeleri: `content/config.ts` (gece tüketimi P/Y/K −5,75 / −8,25 / −4; kritik hasar 1,1/sa; gece iyileşmesi 10, rahat eşiği 25; acil yedek 25'te +52) ve `content/tuning.ts` (seçenek türüne göre maliyet çarpanı: ertele 0,3, hızlı 0,8, sağlam 1,8, yaratıcı 1; rutin kazancı 0,3). Oturum 3 değerleri; öncekiler `docs/PROGRESS.md`. Radyasyon fiziksel olay sayılır, çarpanla ölçeklenmez. Arama araçları: `tests/tools/search.test.ts`, `tests/tools/trace.test.ts` (ortam değişkeni yoksa hiçbir şey yapmaz).
+Denge botlarla ölçülür (`tests/balance.test.ts`, 1-200 tohum). Ayar düğmeleri: `content/config.ts` (gece tüketimi P/Y/K −4,25 / −5,5 / −5,25; kritik hasar 0,9/sa; gece iyileşmesi 8, rahat eşiği 20; radyasyonun Sağlık etkisi 0,8; acil yedek 25'te +30, sonra her gece −2) ve `content/tuning.ts` (seçenek türüne göre maliyet çarpanı: ertele 0,4, hızlı 0,7, sağlam 1,8, yaratıcı 1; rutin kazancı 0,5). Oturum 4 değerleri; öncekiler `docs/PROGRESS.md`.
+
+**Hedefler (oyun sahibinin Oturum 4 kararı, testlerde):** rastgele %5-25; dikkatli %60-88; en ucuz ve sağlam < %50; hiçbir şey yapmayan %0; Sol 1'de kayıp yok; toplam kayıplarda hiçbir neden > %60 ve Kalkan %15-40; dikkatli botun kayıplarında Kalkan < %75; katı kurtarma ≥ %35; Sol 6'da X sınıfı olaylarda regolit, ertelemeden en az 10 puan iyi, diğer olaylarda fark ≤ 10 puan.
+Neden gevşetildi: eski hedefler (rastgele ≤ %20, dikkatli ≤ %85, dikkatli Kalkan < %70, katı kurtarma ≥ %40) bedelli yedekle birlikte tutmuyordu; Oturum 4'te ~8.500 ayar denendi, hepsini tutan çıkmadı. Bedava yedeği koruyup sayıları tutturmak oyunun ana dersini (bugün yatırım yap, sonra karşılığını al) tersine çeviriyordu. Oyun sahibi dersin doğruluğunu sınırların birkaç puanından önde tuttu: sığınak yatırımı karşılığını veriyor, Kalkan yeniden gerçek bir tehdit, hiçbir şey yapmamak kaybettiriyor. Radyasyon fiziksel olay sayılır, çarpanla ölçeklenmez. Arama araçları: `tests/tools/search.test.ts`, `tests/tools/trace.test.ts` (ortam değişkeni yoksa hiçbir şey yapmaz).
 
 Ayar sırasında öğrenilenler (sonraki oturum için):
 - Dikkatli botun sonucu tohuma çok az bağlıydı; tek düğme (ör. gece tüketimi −6 → −7) onu %99'dan %6'ya atıyordu. Şans payını büyütmek için zar aralıkları genişletildi.
@@ -123,7 +129,7 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - Rastgele bot ile dikkatli bot arasındaki uçurumu kapatan asıl mekanik **acil yedek** oldu.
 - Kurtarma oranını en çok "rahat" eşiği (gece iyileşmesi için) etkiledi: tek bir kaynağı eşiğin üstüne çıkaran tek karar her gece iyileşmeyi açıyor.
 - Oturum 3: yedek eşiği 25'e çekilince eski %50 kurtarma oranının bir kısmının **kusurun kendisinden** geldiği görüldü (tek bir karar kaynağı 10'un altına itip +35 yedeği tetikleyince büyük bir salınım oluyordu). Katı kurtarma ≥ %40 ancak büyük yedekle (≈50) ve güçlü gece iyileşmesiyle (≈10) tutuyor.
-- Büyük yedek, kaynağı erken 25'in altına düşürmeyi ödüllendirir. Bu yüzden Sol 6 sığınak yatırımı (regolit, su) dikkatli botta ertelemekten **daha kötü** çıkıyor: regolitin Güç bedeli bazı tohumlarda Güç yedeğini Sol 6'da harcatıyor, fırtınada yedek kalmıyor. Sol 6 dengeli olan ayarlarda (yedek 20-30) katı kurtarma %20-32'ye düşüyor. Ödünleşim `docs/PROGRESS.md` oturum 3'te.
+- (Oturum 3, artık geçerli değil) Büyük yedek, kaynağı erken 25'in altına düşürmeyi ödüllendirir. Bu yüzden Sol 6 sığınak yatırımı (regolit, su) dikkatli botta ertelemekten **daha kötü** çıkıyor: regolitin Güç bedeli bazı tohumlarda Güç yedeğini Sol 6'da harcatıyor, fırtınada yedek kalmıyor. Sol 6 dengeli olan ayarlarda (yedek 20-30) katı kurtarma %20-32'ye düşüyor. Ödünleşim `docs/PROGRESS.md` oturum 3'te.
 - Arama araçları: `tests/tools/search.test.ts` artık `RESCUE=1` ile iki kurtarma ölçüsünü, `FORCE='[["s6_shelter","regolith"],...]'` ile seçenek zorlamayı yazar; `tests/tools/picks.test.ts` (`PICKS=1`) botların seçenek dağılımı.
 
 ## 6b. Arayüz kuralları (Oturum 2, oyun testinden sonra)
@@ -148,7 +154,7 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - Doz arayüzde mGy (soğurulan doz). Birimin dayanağı Curiosity RAD'ın yayımlanmış yüzey değeri (≈210 µGy/gün). Sievert kullanılmadı, çünkü RadLab ve RAD'ın karşılaştırılabilir değeri soğurulan doz. Dozun ölümcül eşiği yok; puanı düşürür.
 - Dünya-Mars gecikmesi sayıyla simüle edilmedi; Sol 7 talimatı hikâyede "durum değişti" olarak işlenir.
 - "Dinlen" ve "EVA ile panel fırçala" bakım işleri denge için çıkarıldı (bkz. §6).
-- Acil yedek: kaynak başına bir kez, kritik eşiğin (25) altına inince +52. Gece iyileşmesi: tüm kaynaklar ≥ 25 ise +10.
+- Acil yedek: kaynak başına bir kez, kritik eşiğin (25) altına inince +30; o kaynak sonra her gece 2 puan fazla erir (sistem yıpranır). Gece iyileşmesi: tüm kaynaklar ≥ 20 ise +8.
 - Rastgele bot tanımı §5'teki gibidir (%15 erken bitirme dahil); hedefler bu tanıma göre ölçüldü.
 - Kara Kutu'da alternatif, ancak orijinal gidişatta o an yapılabilir idiyse seçilebilir.
 - Otomatik pilot, kayıt bittikten sonra dikkatli bottur. Kurtarma oranı ayrıca "kayıt bitince astronot hiçbir şey yapmaz" kuralıyla da ölçülüp raporlanır.

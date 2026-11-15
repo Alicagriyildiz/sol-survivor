@@ -12,7 +12,7 @@ You are the only astronaut on a Mars base. A resupply lander arrives on sol 15, 
 2. Each sol starts with a briefing: the day's problems, weather, space weather and a message from Earth.
 3. You have 10 work hours. Click a station, read the options (cost in hours, what goes up or down, hints) and choose one. Walking and spacesuit trips (EVA) also cost hours.
 4. End the sol. The night report shows what changed and why, a "what really happened" note from a real mission, and sometimes a NASA study.
-5. If a gauge falls into the red, Health drops every hour. Each gauge has a one-time emergency reserve that kicks in at the same red line.
+5. If a gauge falls into the red, Health drops every hour. Each gauge has a one-time emergency reserve that kicks in at the same red line, but it is not free: that system then wears out a little faster every night.
 6. Survive until the lander arrives, then open the Black Box.
 
 ## Real NASA data

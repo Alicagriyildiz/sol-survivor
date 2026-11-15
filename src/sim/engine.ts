@@ -196,12 +196,20 @@ export function createEngine(content: ContentPack): Engine {
     s.res[r] = round2(clamp(before + v, 0, 100));
     addDelta(ctx.deltas, r, s.res[r] - before);
     const rv = s.config.rules.reserve;
-    if (rv.amount > 0 && s.res[r] < rv.threshold && !s.reservesUsed.includes(r)) {
+    const available = rv.shared ? s.reservesUsed.length === 0 : !s.reservesUsed.includes(r);
+    if (rv.amount > 0 && s.res[r] < rv.threshold && available) {
       s.reservesUsed = [...s.reservesUsed, r];
       const rc = newCtx(ctx.at, `reserve:${r}`, { kind: 'reserve', res: r });
       const b = s.res[r];
       s.res[r] = round2(clamp(b + rv.amount, 0, 100));
       addDelta(rc.deltas, r, s.res[r] - b);
+      if (rv.healthCost) hurt(s, rc, r, -rv.healthCost);
+      if (rv.wear) {
+        s.modifiers = [
+          ...s.modifiers.filter((m) => m.id !== `reserveWear:${r}`),
+          { id: `reserveWear:${r}`, nightly: { [r]: -rv.wear }, remaining: null, untilResolved: null, label: 'reserveWear', causes: [] },
+        ];
+      }
       pendingCommits.push(rc);
     }
   }

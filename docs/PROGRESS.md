@@ -1,5 +1,51 @@
 # İlerleme
 
+## Oturum 4 — 2026-11-15 (sabah) — acil yedek bedelli oldu
+
+### Sorun
+Oturum 3'teki +52'lik bedava yedek ihmali ödüllendiriyordu. Sol 6'da sığınağı ertelemek %97, güçlendirmek %73 çıkıyordu (X olaylarında bile ertele %94). Kalkan kayıp nedeni olarak neredeyse yoktu (%0,4). Veriyi bağladığımız Sol 12 oyunun en önemsiz yeri olmuştu.
+
+### Kural
+Acil yedek kaynak başına bir kez, kritik eşikte (25), **+30**; **o kaynak görevin geri kalanında her gece 2 puan daha fazla erir.** Sağlık bedeli yok. Motor `shared` / `healthCost` / `wear` seçeneklerini destekliyor (DESIGN §1). Oyuncuya: "Acil yedek devreye girdi. Bu sistem artık her gece biraz daha hızlı yıpranacak." (anında, önizlemede, raporda; gece raporunda "Acil yedekten sonra sistem daha hızlı yıpranıyor" satırı).
+
+İlk denemede (45 dk) eski hedeflerin hepsini tutan ayar bulunamadı ve değişiklik geri alındı (~8.500 ayar). Bulgu: katı kurtarma oranı rastgele botun kazanma oranıyla birlikte iner; yedek bedelli olunca rastgele bot daha uzaktan kaybeder. Oyun sahibi hedefleri güncelledi (DESIGN §6), en yakın aday alındı.
+
+### Denge (tohum 1-200)
+| | Oturum 3 | Oturum 4 |
+|---|---|---|
+| Rastgele | %18 | %19,5 |
+| En ucuz | %0 | %3 |
+| Sağlam | %36 | %30 |
+| Dikkatli | %79,5 (kayıplar 51 / 49 / 0) | %83,5 (30 / 0 / 70) |
+| Hiçbir şey yapmayan (yeni) | — (%0) | %0 |
+| Tüm botlar Güç / Yaşam / Kalkan | 37 / 63 / 0 (idle dahil) | 57,8 / 21 / **21,2** |
+| Kurtarma otomatik pilot / katı | %48,2 / %43,9 | %45,3 / **%36,6** |
+| Sol 6, X olayları: regolit / ertele | %72 / %94 | **%100 / %78** |
+| Sol 6, diğer olaylar: regolit / ertele | %73 / %98 | %100 / %94 |
+
+Tüm Oturum 4 hedefleri ✅ (testli). Ayar değerleri DESIGN §6.
+
+Dürüst notlar:
+- Sınırlara yakın: dikkatli botun Kalkan payı %69,7 (sınır < %75), rastgele %19,5 (≤ %25), dikkatli %83,5 (≤ %88).
+- Sol 6'da regolit zorlanınca dikkatli bot her olayda %100 kazanıyor: artık en güçlü seçenek. Zayıf olaylarda fark 6 puan (hedef ≤ 10), ama "hiçbir seçenek her durumda en iyi olmasın" kuralına göre regolit fazla güçlü.
+- Dikkatli botun kayıplarının %70'i Kalkan: radyasyon yeniden ciddi, ama Oturum 2'deki %88'e yaklaşıyor.
+
+### Gözle doğrulama
+Görev 8 (X8.2, 10 Eylül 2017) arayüzden iki kez oynandı, her istasyonda ilk seçenek; ikincisinde Sol 6 ertelendi.
+- Sol 12 "Son yaptığın" kartı (sığınakta kal): güçlendiren oyuncuda Sağlık ▼▼, doz ▲▲ ve "🔗 Sol 6'da sığınağı regolitle güçlendirdin: sığınak seni çok iyi korur."; erteleyen oyuncuda ▼▼▼ / ▲▲▲ ve "Sol 6'da sığınak güçlendirilmedi: duvarı ince, az korur."
+- Sol 12 raporu: "Bunu Sol 6'da seçtiğin “Duvara kalın regolit katmanı ekle” etkiledi."; erteleyende ayrıca "Kalkan çok zayıf…" satırı.
+- Görev sonu doz: 3,6 mGy'ye karşı 5,1 mGy. Konsol hatası yok.
+
+### Testler
+69 test geçiyor. Yeni: hiçbir şey yapmayan %0, Sol 6 olay sınıfına göre, toplamda Kalkan %15-40, yedeğin kalıcı aşınması. Güncellenen sınırlar: rastgele %5-25, dikkatli %60-88, dikkatli Kalkan < %75, katı kurtarma ≥ %35.
+
+### Kalan işler
+- Sol 6 regolit artık fazla güçlü (her olayda %100); bedelini olay şiddetiyle dengelemek.
+- Dikkatli botta Kalkan payını aşağı çekmek (%70).
+- Oturum 3'teki diğer zayıf seçenekler bu ayarda yeniden ölçülmedi.
+
+---
+
 ## Oturum 3 — 2026-11-15 (sabah, sunum öncesi) — gerçek NASA verisi, Kalkan/yedek kuralı, yayın
 
 3D sahne bu oturumda yapılmadı. Jüri için veri belgesi: `docs/DATA.md`.

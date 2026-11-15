@@ -112,4 +112,13 @@ describe('emergency reserve rule (session 3)', () => {
   it('the reserve kicks in at the same line where Health starts to drain', () => {
     expect(DEFAULT_CONFIG.rules.reserve.threshold).toBe(DEFAULT_CONFIG.rules.critical);
   });
+  it('the reserve is not free: that gauge wears faster every night afterwards', () => {
+    const s0 = engine.init(1, DEFAULT_CONFIG);
+    const low: GameState = { ...s0, res: { ...s0.res, life: 25.5 } };
+    const after = engine.step(low, { type: 'resolve', faultId: 's1_wakeup', optionId: 'defer' });
+    expect(after.reservesUsed).toEqual(['life']);
+    const wear = after.modifiers.find((m) => m.id === 'reserveWear:life');
+    expect(wear?.nightly.life).toBe(-DEFAULT_CONFIG.rules.reserve.wear!);
+    expect(wear?.remaining).toBeNull();
+  });
 });
