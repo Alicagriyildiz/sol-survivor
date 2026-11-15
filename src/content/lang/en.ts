@@ -680,6 +680,7 @@ export const en: Lang = {
   } as Record<string, string>,
   /** "Data" screen. */
   data: {
+    aiNote: 'Code written with AI assistance (Claude Code).',
     open: 'Data',
     title: 'NASA data in this game',
     intro: 'Some numbers in this game come from NASA\'s open data. The data was downloaded once and put inside the game. The game does not connect to the internet.',

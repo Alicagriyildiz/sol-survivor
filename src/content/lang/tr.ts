@@ -691,6 +691,7 @@ export const tr = {
   } as Record<string, string>,
   /** "Data" screen. */
   data: {
+    aiNote: 'Kod yapay zeka yardımıyla yazıldı (Claude Code).',
     open: 'Veriler',
     title: 'Oyundaki NASA verileri',
     intro: 'Bu oyundaki bazı sayılar NASA\'nın açık verisinden gelir. Veriler bir kez indirildi ve oyunun içine kondu. Oyun internete bağlanmaz.',

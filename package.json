@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
+  "description": "Sol Survivor: a browser game for NASA Space Apps Challenge 2026 (Build a Junior Astronaut Mission Trainer). Not an official NASA product.",
+  "aiDisclosure": "Code written with AI assistance (Claude Code, Anthropic); commits list it as co-author. Game idea, rules, scenarios, balance targets, playtesting and direction by the team. No AI-generated art: 3D models are Kenney Space Kit (CC0); sounds are generated in code in the browser. No NASA logo or mission insignia is used.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

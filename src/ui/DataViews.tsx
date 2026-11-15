@@ -196,6 +196,7 @@ export function DataScreen({ onBack }: { onBack: () => void }) {
       </div>
       <p className="small">{d.design}</p>
       <p className="dim small">{d.more}</p>
+      <p className="dim small">{d.aiNote}</p>
       <button className="btn primary big" onClick={onBack}>
         ← {tr.blackbox.back}
       </button>

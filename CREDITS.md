@@ -17,6 +17,7 @@ Their materials are recoloured at load time to the game palette (`src/scene/core
 | chimney_detailed, pipe_ring | roof vents |
 | desk_chair, barrels, machine_barrel | hab interior |
 | machine_generator, machine_generatorLarge, machine_barrelLarge, machine_wireless, machine_wirelessCable, barrel, supports_low, craft_cargoA | battery charger, yard, beacon mast, cargo sled, station details |
+| hangar_largeA, hangar_roundA, hangar_smallA, rover, structure_detailed, satelliteDish_large | outpost around the base and along the EVA paths (also behind the title and text screens) |
 
 Not used: **Quaternius Ultimate Space Kit** (the downloaded parts had no licence file inside, and their colours come
 from a texture atlas that could not be recoloured to the palette in time). Its public page states CC0
