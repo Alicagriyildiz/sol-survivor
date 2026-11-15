@@ -1,7 +1,7 @@
 // Everything the player sees about the real NASA data: the sol 12 event card, the space
 // weather line, the 2018 storm line, study notes, the dose comparison and the "Data" screen.
 // Values come from content/data.ts (snapshot files); the game never goes online.
-import { SOURCES, data, fmt, tr } from '../content';
+import { SOURCES, data, fmt, numLocale, tr } from '../content';
 import type { GameState } from '../sim/types';
 import { fmtDate, fmtNum, mGy } from './parts';
 
@@ -122,7 +122,7 @@ export function DataScreen({ onBack }: { onBack: () => void }) {
       link: pub.values.marsSurfaceAbsorbedDose.url,
     },
     {
-      what: fmt(d.radlab, { n: data.RADLAB_META.readings.toLocaleString('tr-TR'), v: fmtNum(data.ISS_MGY_PER_DAY, 2) }),
+      what: fmt(d.radlab, { n: data.RADLAB_META.readings.toLocaleString(numLocale()), v: fmtNum(data.ISS_MGY_PER_DAY, 2) }),
       source: 'NASA OSDR RadLab',
       date: fmt(d.downloaded, { date: fmtDate(data.RADLAB_META.downloadedAt) }),
       effect: d.radlabEffect,

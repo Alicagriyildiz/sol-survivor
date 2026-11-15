@@ -1,5 +1,5 @@
 // Turns an Explanation into short, child-friendly sentences using the language file.
-import { fmt, numSuffix, tr } from '../content/lang/tr';
+import { fmt, numSuffix, tr } from '../content/lang';
 import type { Source } from '../sim/types';
 import type { Diff, Explanation, ExplainStep } from './blackbox';
 

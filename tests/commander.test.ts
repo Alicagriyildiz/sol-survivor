@@ -10,7 +10,19 @@ const SEEDS = seedRange(200);
 const stats = {} as Record<BotName, BatchStats>;
 for (const name of Object.keys(BOTS) as BotName[]) stats[name] = runBatch(engine, BOTS[name], SEEDS, COMMANDER_CONFIG);
 
+// The careful bot that always reinforces the sol 6 shelter: the strongest single pick.
+const regolith = runBatch(
+  engine,
+  (s, e, r) =>
+    s.faults.some((f) => f.faultId === 's6_shelter') && !e.check(s, { type: 'resolve', faultId: 's6_shelter', optionId: 'regolith' })
+      ? { type: 'resolve', faultId: 's6_shelter', optionId: 'regolith' }
+      : BOTS.careful(s, e, r),
+  SEEDS,
+  COMMANDER_CONFIG,
+);
+
 const pct = (x: number) => Math.round(x * 1000) / 10;
+console.log(`[commander] careful + sol 6 regolith forced: win ${pct(regolith.winRate)}%`);
 for (const [name, st] of Object.entries(stats)) {
   const l = st.games - st.wins || 1;
   console.log(
@@ -41,6 +53,10 @@ describe('commander balance (200 seeds)', () => {
   });
   it('no bot ever loses on sol 1', () => {
     for (const st of Object.values(stats)) expect(st.lossSols[1] ?? 0).toBe(0);
+  });
+  it('reinforcing the sol 6 shelter helps but is no win button (careful + regolith <= 85%)', () => {
+    expect(regolith.winRate).toBeGreaterThan(stats.careful.winRate);
+    expect(regolith.winRate).toBeLessThanOrEqual(0.85);
   });
 });
 

@@ -34,13 +34,15 @@ export const ITEMS = ['patchKit', 'spareFilter', 'tape'] as const;
 export type Level = 'junior' | 'commander';
 
 /** Commander ("Komutan") mission: same scenario, same rules, but the base starts with less
- *  Power and Life Support (60 instead of 70). Ten points sounds small, but it removes the
- *  slack a careful player has before the storm (sol 9) and the solar event (sol 12).
- *  Bot targets (tests/commander.test.ts, seeds 1-200): careful 40-60%, random < 8%,
- *  doing nothing 0%, no loss on sol 1. */
+ *  Power and Life Support (57 / 61 instead of 70 / 70). That removes the slack a careful
+ *  player has before the storm (sol 9) and the solar event (sol 12).
+ *  Bot numbers (seeds 1-200, tests/commander.test.ts): careful 44%, random 2.5%, idle 0%,
+ *  no loss on sol 1. Chosen over 60 / 60 (careful 46%) because there reinforcing the sol 6
+ *  shelter alone lifted the careful bot to 95.5%; here it gives 67%, and the careful bot's
+ *  losses are split between Power, Life and Shield instead of ~85% Shield. */
 export const COMMANDER_CONFIG: MissionConfig = {
   ...DEFAULT_CONFIG,
-  start: { ...DEFAULT_CONFIG.start, power: 60, life: 60 },
+  start: { ...DEFAULT_CONFIG.start, power: 57, life: 61 },
 };
 
 export function configFor(level: Level): MissionConfig {

@@ -8,10 +8,13 @@ import * as THREE from 'three';
 import { fmt, tr } from '../content';
 import type { ActionKind } from '../content/actions';
 import type { StationInfo } from '../ui/stationInfo';
-import { colorHex, colors } from '../ui/tokens';
+import { colorHex,} from '../ui/tokens';
 import { fmtHours } from '../ui/parts';
 import type { SceneLook, WorkLook } from './look';
-import { Blinker, Door, ease, now, RBox, rbox, reduceMotion, type Phase, type RT, type SceneRun, type StationProps } from './core';
+import { ease, now, reduceMotion, type Phase, type RT, type SceneRun, type StationProps } from './core';
+import { DustWall, Dust, Ground, Hills, Lights, Rocks, Sky, type Quality } from './env';
+import { Hab, Roof } from './hab';
+import { Hand } from './hand';
 import Hub from './stations/Hub';
 import Battery from './stations/Battery';
 import Shelter from './stations/Shelter';
@@ -20,25 +23,15 @@ import Greenhouse from './stations/Greenhouse';
 import Landing from './stations/Landing';
 import Solar, { Rover } from './stations/Solar';
 import {
-  AIRLOCK_OUT,
   angleDelta,
   clampPitch,
   EYE,
-  GREENHOUSE_AT,
-  GREENHOUSE_R,
-  groundHeight,
-  HAB_R,
-  LANDING_AT,
   path,
   pitchTo,
   pointAt,
-  SHELTER_AT,
-  SOLAR_AT,
   SPOTS,
-  WALL_H,
   walkSeconds,
   yawTo,
-  type V2,
   type V3,
 } from './world';
 
@@ -63,6 +56,18 @@ export interface FirstPersonProps {
   hint: boolean;
 }
 
+/** Phones and small touch screens: no shadows, fewer particles. */
+function detectQuality(): Quality {
+  try {
+    const q = new URLSearchParams(window.location.search).get('quality');
+    if (q === 'low' || q === 'high') return q;
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    return touch && Math.min(window.innerWidth, window.innerHeight) < 820 ? 'low' : 'high';
+  } catch {
+    return 'high';
+  }
+}
+
 const standPos = (id: string) => {
   const s = SPOTS[id] ?? SPOTS.hub!;
   return new THREE.Vector3(s.stand[0], EYE, s.stand[1]);
@@ -72,362 +77,9 @@ const standPos = (id: string) => {
 
 // ------------------------------------------------------------------ sky, light, ground
 
-const SKY_VERT = `varying vec3 vDir; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vDir = w.xyz - cameraPosition; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const SKY_FRAG = `uniform vec3 top; uniform vec3 horizon; uniform vec3 sunDir; uniform float sunAmt; varying vec3 vDir;
-void main(){ vec3 d = normalize(vDir); float h = clamp(d.y, -0.2, 1.0);
- vec3 c = mix(horizon, top, pow(max(h,0.0), 0.55));
- float s = max(dot(d, normalize(sunDir)), 0.0);
- c += vec3(0.95,0.97,1.0) * (pow(s, 900.0) * 1.2 + pow(s, 18.0) * 0.18) * sunAmt;
- gl_FragColor = vec4(c, 1.0); }`;
-
-const SUN_DIR: V3 = [0.35, 0.62, 0.7];
-
-function skyColors(look: SceneLook): [string, string] {
-  if (look.night) return [colors.skyNightTop, colors.skyNightHorizon];
-  if (look.storm) return [colors.skyStormTop, colors.skyStormHorizon];
-  if (look.solarEvent) return [colors.skyEventTop, colors.skyEventHorizon];
-  return [colors.skyTop, colors.skyHorizon];
-}
-
-function Sky({ look }: { look: SceneLook }) {
-  const mesh = useRef<THREE.Mesh>(null);
-  const { scene } = useThree();
-  const [top, horizon] = skyColors(look);
-  const mat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        vertexShader: SKY_VERT,
-        fragmentShader: SKY_FRAG,
-        side: THREE.BackSide,
-        depthWrite: false,
-        uniforms: {
-          top: { value: new THREE.Color() },
-          horizon: { value: new THREE.Color() },
-          sunDir: { value: new THREE.Vector3(...SUN_DIR) },
-          sunAmt: { value: 1 },
-        },
-      }),
-    [],
-  );
-  const target = useMemo(() => ({ top: new THREE.Color(top), horizon: new THREE.Color(horizon) }), [top, horizon]);
-  useLayoutEffect(() => {
-    scene.fog = new THREE.Fog(horizon, look.storm ? 18 : 70, look.storm ? 85 : 320);
-    (mat.uniforms.top!.value as THREE.Color).copy(target.top);
-    (mat.uniforms.horizon!.value as THREE.Color).copy(target.horizon);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useFrame((st, dt) => {
-    const k = 1 - Math.exp(-dt * 2);
-    (mat.uniforms.top!.value as THREE.Color).lerp(target.top, k);
-    (mat.uniforms.horizon!.value as THREE.Color).lerp(target.horizon, k);
-    mat.uniforms.sunAmt!.value += ((look.storm || look.night ? 0.15 : 1) - mat.uniforms.sunAmt!.value) * k;
-    const fog = scene.fog as THREE.Fog | null;
-    if (fog) {
-      fog.color.copy(mat.uniforms.horizon!.value as THREE.Color);
-      fog.near += ((look.storm ? 14 : 70) - fog.near) * k;
-      fog.far += ((look.storm ? 70 : 320) - fog.far) * k;
-    }
-    if (mesh.current) mesh.current.position.copy(st.camera.position);
-  });
-  return (
-    <mesh ref={mesh} material={mat} renderOrder={-1} frustumCulled={false}>
-      <sphereGeometry args={[480, 24, 12]} />
-    </mesh>
-  );
-}
-
-function Lights({ look }: { look: SceneLook }) {
-  const sun = useRef<THREE.DirectionalLight>(null);
-  const hemi = useRef<THREE.HemisphereLight>(null);
-  const { scene } = useThree();
-  useLayoutEffect(() => {
-    const l = sun.current;
-    if (!l) return;
-    l.target.position.set(12, 0, -2);
-    scene.add(l.target);
-    const c = l.shadow.camera;
-    c.left = -34;
-    c.right = 34;
-    c.top = 34;
-    c.bottom = -34;
-    c.near = 1;
-    c.far = 140;
-    c.updateProjectionMatrix();
-    return () => void scene.remove(l.target);
-  }, [scene]);
-  useFrame((_, dt) => {
-    const k = 1 - Math.exp(-dt * 2);
-    const sunT = look.night ? 0.05 : look.storm ? 0.45 : 2.1;
-    const hemiT = look.night ? 0.25 : look.storm ? 1.0 : 1.05;
-    if (sun.current) sun.current.intensity += (sunT - sun.current.intensity) * k;
-    if (hemi.current) hemi.current.intensity += (hemiT - hemi.current.intensity) * k;
-  });
-  return (
-    <>
-      <hemisphereLight ref={hemi} args={[look.solarEvent ? colorHex.skyEventTop : colorHex.skyTop, colorHex.marsBrown, 1]} />
-      <directionalLight
-        ref={sun}
-        position={[12 + SUN_DIR[0] * 60, SUN_DIR[1] * 60, -2 + SUN_DIR[2] * 60]}
-        color={look.solarEvent ? 0xf2e2f4 : 0xfff4f0}
-        intensity={2}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-bias={-0.0006}
-        shadow-normalBias={0.03}
-      />
-    </>
-  );
-}
-
-function Ground() {
-  const geo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(700, 700, 170, 170);
-    g.rotateX(-Math.PI / 2);
-    g.translate(10, 0, 0);
-    const pos = g.attributes.position!;
-    const col = new Float32Array(pos.count * 3);
-    const a = new THREE.Color(colors.marsGround);
-    const b = new THREE.Color(colors.marsRose);
-    const c = new THREE.Color(colors.marsBrown);
-    const tmp = new THREE.Color();
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      const y = groundHeight(x, z);
-      pos.setY(i, y);
-      const n = Math.sin(x * 0.31 + z * 0.17) * 0.5 + Math.sin(x * 0.07 - z * 0.11) * 0.5;
-      tmp.copy(a).lerp(b, 0.5 + 0.5 * n).lerp(c, Math.min(1, Math.max(0, y / 30)));
-      col[i * 3] = tmp.r;
-      col[i * 3 + 1] = tmp.g;
-      col[i * 3 + 2] = tmp.b;
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    g.computeVertexNormals();
-    return g;
-  }, []);
-  return (
-    <mesh geometry={geo} receiveShadow>
-      <meshLambertMaterial vertexColors />
-    </mesh>
-  );
-}
-
-/** Deterministic rocks, kept off paths and buildings. */
-function Rocks() {
-  const ref = useRef<THREE.InstancedMesh>(null);
-  const list = useMemo(() => {
-    const out: [number, number, number, number][] = [];
-    const segs: [V2, V2][] = [
-      [AIRLOCK_OUT, [17.5, -5]],
-      [[17.5, -5], SPOTS.solar!.stand],
-      [AIRLOCK_OUT, [18.5, 7]],
-      [[18.5, 7], SPOTS.landing!.stand],
-    ];
-    const nearSeg = (x: number, z: number) =>
-      segs.some(([a, b]) => {
-        const dx = b[0] - a[0];
-        const dz = b[1] - a[1];
-        const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
-        return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t) < 2.6;
-      });
-    for (let i = 0; out.length < 170 && i < 2000; i++) {
-      const h = Math.sin(i * 12.9898) * 43758.5453;
-      const r1 = h - Math.floor(h);
-      const h2 = Math.sin(i * 78.233) * 12543.123;
-      const r2 = h2 - Math.floor(h2);
-      const ang = r1 * Math.PI * 2;
-      const rad = 9 + Math.pow(r2, 0.8) * 110;
-      const x = 10 + Math.cos(ang) * rad;
-      const z = Math.sin(ang) * rad;
-      if (Math.hypot(x, z) < HAB_R + 3) continue;
-      if (Math.hypot(x - GREENHOUSE_AT[0], z - GREENHOUSE_AT[1]) < GREENHOUSE_R + 2) continue;
-      if (Math.hypot(x - SHELTER_AT[0], z - SHELTER_AT[1]) < 5) continue;
-      if (Math.abs(x - SOLAR_AT[0]) < 9 && Math.abs(z - SOLAR_AT[1]) < 6) continue;
-      if (Math.hypot(x - LANDING_AT[0], z - LANDING_AT[1]) < 7) continue;
-      if (x > HAB_R && x < 13 && Math.abs(z) < 3) continue;
-      if (nearSeg(x, z)) continue;
-      const s = 0.15 + Math.pow((r1 * 7.3) % 1, 3) * (rad > 30 ? 1.6 : 0.7);
-      out.push([x, z, s, i]);
-    }
-    return out;
-  }, []);
-  useLayoutEffect(() => {
-    const m = ref.current;
-    if (!m) return;
-    const o = new THREE.Object3D();
-    list.forEach(([x, z, s, i], k) => {
-      o.position.set(x, groundHeight(x, z) + s * 0.25, z);
-      o.rotation.set(i * 0.7, i * 1.3, i * 0.4);
-      o.scale.set(s * 1.2, s * 0.75, s);
-      o.updateMatrix();
-      m.setMatrixAt(k, o.matrix);
-    });
-    m.instanceMatrix.needsUpdate = true;
-  }, [list]);
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, list.length]} castShadow receiveShadow>
-      <dodecahedronGeometry args={[1, 0]} />
-      <meshLambertMaterial color={colorHex.marsBrown} flatShading />
-    </instancedMesh>
-  );
-}
-
-/** Floating dust around the camera; thicker in a storm. */
-function Dust({ look }: { look: SceneLook }) {
-  const N = 260;
-  const ref = useRef<THREE.Points>(null);
-  const data = useMemo(() => {
-    const p = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) {
-      p[i * 3] = (Math.sin(i * 91.7) * 0.5 + 0.5) * 40 - 20;
-      p[i * 3 + 1] = (Math.sin(i * 47.3) * 0.5 + 0.5) * 6;
-      p[i * 3 + 2] = (Math.sin(i * 13.1) * 0.5 + 0.5) * 40 - 20;
-    }
-    return p;
-  }, []);
-  const mat = useRef<THREE.PointsMaterial>(null);
-  useFrame((st, dt) => {
-    const pts = ref.current;
-    if (!pts) return;
-    const arr = (pts.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array;
-    const wind = look.storm ? 6 : 0.6;
-    const c = st.camera.position;
-    for (let i = 0; i < N; i++) {
-      let x = arr[i * 3]! + wind * dt;
-      let z = arr[i * 3 + 2]! + wind * 0.3 * dt;
-      if (x - c.x > 20) x -= 40;
-      if (x - c.x < -20) x += 40;
-      if (z - c.z > 20) z -= 40;
-      if (z - c.z < -20) z += 40;
-      arr[i * 3] = x;
-      arr[i * 3 + 2] = z;
-    }
-    pts.geometry.attributes.position!.needsUpdate = true;
-    if (mat.current) mat.current.opacity += ((look.storm ? 0.8 : 0.35) - mat.current.opacity) * (1 - Math.exp(-dt * 2));
-  });
-  return (
-    <points ref={ref} frustumCulled={false}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[data, 3]} />
-      </bufferGeometry>
-      <pointsMaterial ref={mat} color={colorHex.marsDust} size={look.storm ? 0.09 : 0.05} transparent opacity={0.35} depthWrite={false} />
-    </points>
-  );
-}
-
 // ------------------------------------------------------------------ small animated parts
 
 // ------------------------------------------------------------------ habitat
-
-const SEGS = 24;
-const SEG_DEG = 360 / SEGS;
-const SEG_W = 2 * HAB_R * Math.sin(Math.PI / SEGS) + 0.04;
-const DOORS: Record<number, string> = { 0: 'airlock', 180: 'greenhouse', 225: 'shelter' };
-const WINDOWS = new Set([15, 30, 315, 330, 150, 210, 270]);
-const SKIP = new Set<number>(); // reserved for future openings
-
-function HabWall({ rt, look }: { rt: MutableRefObject<RT>; look: SceneLook }) {
-  const parts: ReactNode[] = [];
-  for (let k = 0; k < SEGS; k++) {
-    const deg = k * SEG_DEG;
-    if (SKIP.has(deg)) continue;
-    const a = (deg * Math.PI) / 180;
-    const pos: V3 = [Math.cos(a) * HAB_R, 0, -Math.sin(a) * HAB_R];
-    const rotY = a + Math.PI / 2; // wall plane tangent, facing the centre
-    if (DOORS[deg]) {
-      parts.push(<Door key={k} at={pos} rotY={rotY} rt={rt} />);
-      parts.push(<RBox key={`t${k}`} size={[SEG_W, WALL_H - 2.42, 0.2]} position={[pos[0], 2.42 + (WALL_H - 2.42) / 2, pos[2]]} rotation={[0, rotY, 0]} color={colorHex.hull} />);
-      continue;
-    }
-    if (WINDOWS.has(deg)) {
-      parts.push(
-        <group key={k} position={pos} rotation={[0, rotY, 0]}>
-          <RBox size={[SEG_W, 0.95, 0.2]} position={[0, 0.475, 0]} color={colorHex.hull} />
-          <RBox size={[SEG_W, 0.85, 0.2]} position={[0, WALL_H - 0.425, 0]} color={colorHex.hull} />
-          <RBox size={[0.12, 1.2, 0.24]} position={[-SEG_W / 2 + 0.06, 1.55, 0]} color={colorHex.hullDark} />
-          <RBox size={[0.12, 1.2, 0.24]} position={[SEG_W / 2 - 0.06, 1.55, 0]} color={colorHex.hullDark} />
-          <mesh position={[0, 1.55, 0]} raycast={() => null}>
-            <planeGeometry args={[SEG_W - 0.2, 1.2]} />
-            <meshStandardMaterial color={0xbfe6ef} transparent opacity={0.14} roughness={0.05} side={THREE.DoubleSide} depthWrite={false} />
-          </mesh>
-        </group>,
-      );
-      continue;
-    }
-    parts.push(<RBox key={k} size={[SEG_W, WALL_H, 0.2]} position={[pos[0], WALL_H / 2, pos[2]]} rotation={[0, rotY, 0]} color={colorHex.hull} />);
-    // Ribs every other segment (inside), so the wall reads as a structure.
-    if (k % 2 === 0)
-      parts.push(
-        <RBox key={`r${k}`} size={[0.14, WALL_H, 0.16]} position={[Math.cos(a + Math.PI / SEGS) * (HAB_R - 0.14), WALL_H / 2, -Math.sin(a + Math.PI / SEGS) * (HAB_R - 0.14)]} rotation={[0, rotY, 0]} color={colorHex.hullDark} />,
-      );
-  }
-  const lightOn = look.lights === 'on' ? 1 : look.lights === 'dim' ? 0.4 : 0.06;
-  return (
-    <group>
-      {parts}
-      {/* Roof: low dome, casts shade inside. */}
-      <mesh position={[0, WALL_H, 0]} scale={[1, 0.42, 1]} castShadow receiveShadow>
-        <sphereGeometry args={[HAB_R + 0.12, 36, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={colorHex.hull} roughness={0.75} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, WALL_H - 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[HAB_R - 0.4, HAB_R + 0.15, 48]} />
-        <meshStandardMaterial color={colorHex.hullDark} side={THREE.DoubleSide} />
-      </mesh>
-      {/* Floor. */}
-      <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[HAB_R + 0.1, 48]} />
-        <meshStandardMaterial color={0x4a5370} roughness={0.85} />
-      </mesh>
-      <mesh position={[0, 0.07, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[1.6, 1.75, 48]} />
-        <meshBasicMaterial color={colorHex.accentDim} />
-      </mesh>
-      {/* Light ring under the roof. */}
-      <mesh position={[0, WALL_H - 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[2.6, 2.85, 48]} />
-        <meshStandardMaterial color={0xe9fbfc} emissive={0xe9fbfc} emissiveIntensity={lightOn * 1.6} side={THREE.DoubleSide} />
-      </mesh>
-      <pointLight position={[0, WALL_H - 0.4, 0]} intensity={lightOn * 26} distance={16} decay={1.6} color={0xeefcff} />
-      <pointLight position={[0, 1.8, -3.6]} intensity={lightOn * 6} distance={6} decay={1.6} color={0xdff6ff} />
-      {/* Central table. */}
-      <mesh position={[0, 0.5, 0]} castShadow>
-        <cylinderGeometry args={[0.15, 0.25, 0.9, 12]} />
-        <meshStandardMaterial color={colorHex.metal} />
-      </mesh>
-      <RBox size={[1.4, 0.06, 1.0]} r={0.03} position={[0, 0.96, 0]} color={colorHex.hullDark} />
-    </group>
-  );
-}
-
-/** Hab roof outside: antenna that turns, blinking lights. */
-function Roof() {
-  const dish = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (dish.current) dish.current.rotation.y = clock.elapsedTime * 0.35;
-  });
-  return (
-    <group position={[1.8, WALL_H + 2.4, 1.2]}>
-      <mesh position={[0, -0.4, 0]}>
-        <cylinderGeometry args={[0.06, 0.08, 1.2, 8]} />
-        <meshStandardMaterial color={colorHex.metal} />
-      </mesh>
-      <group ref={dish}>
-        <mesh position={[0, 0.35, 0]} rotation={[0.9, 0, 0]} castShadow>
-          <sphereGeometry args={[0.7, 18, 8, 0, Math.PI * 2, 0, 0.9]} />
-          <meshStandardMaterial color={colorHex.hull} side={THREE.DoubleSide} roughness={0.5} />
-        </mesh>
-        <mesh position={[0, 0.5, 0.35]} rotation={[0.9, 0, 0]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.8, 6]} />
-          <meshStandardMaterial color={colorHex.metal} />
-        </mesh>
-      </group>
-      <Blinker at={[0, 0.25, -0.9]} color={colorHex.danger} period={1.4} />
-      <Blinker at={[-3.6, -1.5, -2]} color={colorHex.accent} period={2.1} phase={0.5} />
-    </group>
-  );
-}
 
 // ------------------------------------------------------------------ solar field + wipe surface
 
@@ -489,110 +141,6 @@ function Puffs({ rt }: { rt: MutableRefObject<RT> }) {
 }
 
 // ------------------------------------------------------------------ hand and tool
-
-type Tool = 'brush' | 'filter' | 'tape' | 'wrench';
-
-function toolFor(kind: ActionKind | null, at: string): Tool {
-  if (kind === 'wipe') return 'brush';
-  if (kind === 'replace') return 'filter';
-  if (kind === 'patch') return 'tape';
-  if (!kind && SPOTS[at]?.outside) return 'brush';
-  return 'wrench';
-}
-
-function Hand({ rt }: { rt: MutableRefObject<RT> }) {
-  const g = useRef<THREE.Group>(null);
-  const tools = useRef<Record<Tool, THREE.Group | null>>({ brush: null, filter: null, tape: null, wrench: null });
-  const { camera } = useThree();
-  const tmp = useMemo(() => ({ off: new THREE.Vector3(), q: new THREE.Quaternion(), target: new THREE.Vector3(), cur: new THREE.Vector3(), init: false }), []);
-  useFrame(({ clock }, dt) => {
-    const grp = g.current;
-    if (!grp) return;
-    const R = rt.current;
-    const r = R.run;
-    const kind = r && r.phase !== 'wait' ? r.run.kind : null;
-    const tool = toolFor(kind, R.at);
-    for (const [k, obj] of Object.entries(tools.current)) if (obj) obj.visible = k === tool && !(tool === 'filter' && r && r.p > 0.55);
-    const t = clock.elapsedTime;
-    const walking = !!R.walk;
-    const sway = walking ? Math.sin(t * 9) * 0.015 : Math.sin(t * 1.3) * 0.006;
-    // Rest pose: lower right of the view.
-    tmp.off.set(0.3 + sway, -0.3 + Math.abs(sway) * 0.6, -0.55);
-    let reach = 0;
-    if (r && r.phase === 'do' && r.run.kind !== 'wipe') reach = 0.5 + Math.sin(t * 6) * 0.08 * (r.holding || r.mode === 'auto' ? 1 : 0);
-    tmp.off.z -= reach * 0.25;
-    tmp.off.x -= reach * 0.15;
-    tmp.target.copy(tmp.off).applyQuaternion(camera.quaternion).add(camera.position);
-    // Wiping: the brush goes onto the panel where it is being cleaned.
-    if (r && r.run.kind === 'wipe' && r.phase === 'do' && R.brushOn) {
-      tmp.target.copy(R.brush).add(new THREE.Vector3(0, 0.08, 0));
-    }
-    if (!tmp.init) {
-      tmp.cur.copy(tmp.target);
-      tmp.init = true;
-    }
-    const k = r && r.phase === 'do' ? 1 - Math.exp(-dt * 18) : 1 - Math.exp(-dt * 30);
-    tmp.cur.lerp(tmp.target, k);
-    grp.position.copy(tmp.cur);
-    grp.quaternion.copy(camera.quaternion);
-    grp.rotateX(r && r.run.kind === 'wipe' && r.phase === 'do' ? -0.9 : 0.15);
-    grp.rotateZ(0.25);
-  });
-  const suit = <meshStandardMaterial color={colorHex.suit} roughness={0.8} />;
-  return (
-    <group ref={g}>
-      {/* Glove + cuff. */}
-      <mesh geometry={rbox(0.085, 0.07, 0.11, 0.03)} position={[0, 0, 0.02]}>
-        {suit}
-      </mesh>
-      <mesh position={[0, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.05, 0.055, 0.08, 14]} />
-        <meshStandardMaterial color={colorHex.accentDim} roughness={0.6} />
-      </mesh>
-      <mesh geometry={rbox(0.03, 0.03, 0.06, 0.012)} position={[-0.05, 0.005, -0.02]} rotation={[0, 0.5, 0]}>
-        {suit}
-      </mesh>
-      <group ref={(o) => void (tools.current.brush = o)} position={[0, 0.02, -0.06]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.0]}>
-          <cylinderGeometry args={[0.014, 0.014, 0.2, 8]} />
-          <meshStandardMaterial color={colorHex.metal} />
-        </mesh>
-        <mesh geometry={rbox(0.14, 0.04, 0.06, 0.012)} position={[0, -0.02, -0.11]}>
-          <meshStandardMaterial color={colorHex.accentDim} />
-        </mesh>
-        <mesh position={[0, -0.05, -0.11]}>
-          <boxGeometry args={[0.13, 0.03, 0.05]} />
-          <meshStandardMaterial color={0xe6e0d8} roughness={1} />
-        </mesh>
-      </group>
-      <group ref={(o) => void (tools.current.filter = o)} position={[0, 0.06, -0.08]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.07, 0.07, 0.22, 16]} />
-          <meshStandardMaterial color={colorHex.filterNew} />
-        </mesh>
-        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.08]}>
-          <cylinderGeometry args={[0.072, 0.072, 0.03, 16]} />
-          <meshStandardMaterial color={colorHex.accent} emissive={colorHex.accent} emissiveIntensity={0.4} />
-        </mesh>
-      </group>
-      <group ref={(o) => void (tools.current.tape = o)} position={[0, 0.05, -0.05]}>
-        <mesh rotation={[0, Math.PI / 2, 0]}>
-          <torusGeometry args={[0.045, 0.02, 8, 16]} />
-          <meshStandardMaterial color={colorHex.tape} />
-        </mesh>
-      </group>
-      <group ref={(o) => void (tools.current.wrench = o)} position={[0, 0.02, -0.08]}>
-        <mesh geometry={rbox(0.025, 0.02, 0.18, 0.008)}>
-          <meshStandardMaterial color={colorHex.metal} metalness={0.6} roughness={0.35} />
-        </mesh>
-        <mesh position={[0, 0, -0.1]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.025, 0.01, 6, 12, Math.PI * 1.5]} />
-          <meshStandardMaterial color={colorHex.metal} metalness={0.6} roughness={0.35} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
 
 // ------------------------------------------------------------------ camera and walking
 
@@ -857,6 +405,7 @@ export default function FirstPerson(props: FirstPersonProps) {
     skipWalk: () => false,
   });
   const [phase, setPhase] = useState<Phase>('none');
+  const quality = useMemo(detectQuality, []);
   const [auto, setAuto] = useState(false);
   const bar = useRef<HTMLDivElement | null>(null);
   const labels = useRef<Record<string, HTMLDivElement | null>>({});
@@ -997,19 +546,21 @@ export default function FirstPerson(props: FirstPersonProps) {
     <section className={`fp ${look.storm ? 'storm' : ''} ${look.night ? 'night' : ''}`} aria-label={tr.ui.stations}>
       <div className="fp-canvas" onPointerDown={onDown}>
         <Canvas
-          shadows
-          dpr={[1, 1.5]}
+          shadows={quality === 'high' ? { type: THREE.PCFShadowMap } : false}
+          dpr={quality === 'high' ? [1, 1.5] : [1, 1.25]}
           gl={{ antialias: true, powerPreference: 'default', alpha: false }}
           camera={{ fov: 70, near: 0.05, far: 600, position: [0, EYE, 0] }}
         >
           <ContextWatch onLost={onLost} />
           <Sky look={look} />
-          <Lights look={look} />
-          <Dust look={look} />
+          <Lights look={look} quality={quality} />
+          <Dust look={look} quality={quality} />
+          <DustWall look={look} />
           <group onClick={block}>
             <Ground />
-            <Rocks />
-            <HabWall rt={rt} look={look} />
+            <Hills />
+            <Rocks quality={quality} />
+            <Hab rt={rt} look={look} />
           </group>
           <group {...hit('hub')}>
             <Hub {...sp} />

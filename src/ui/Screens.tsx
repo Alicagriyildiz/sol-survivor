@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
-import { SOURCES, engine, fmt, tr } from '../content';
-import { numSuffix } from '../content/lang/tr';
+import { SOURCES, engine, extra, fmt, numSuffix, tr } from '../content';
 import { activeNotes, reservesUsed, score, solReportRows, todayFaults, type ReportRow, type ReportSection } from '../sim/selectors';
 import { RESOURCES, type Deltas, type GameState } from '../sim/types';
 import { DoseCompare, SpaceWeatherLine, StormLine, StudyLine } from './DataViews';
+import { LangSwitch } from './LangSwitch';
 import { Chart, DeltaList, fmtMGy, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
 import { webglAvailable, type View } from './view';
@@ -26,6 +26,9 @@ export function Start({
   const [tutorial, setTutorial] = useState(true);
   return (
     <div className="screen start">
+      <div className="lang-bar">
+        <LangSwitch big />
+      </div>
       <h1>🔴 {tr.ui.appTitle}</h1>
       <p className="lead">{tr.ui.tagline}</p>
       <div className="card">
@@ -140,11 +143,9 @@ export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
   );
 }
 
-const SECTION_TITLE: Record<ReportSection, string> = {
-  day: `☀ ${tr.ui.dayPart}`,
-  night: `🌙 ${tr.ui.nightPart}`,
-  morning: `🌅 ${tr.ui.morningPart}`,
-};
+/** A function, not a constant: the text must follow the current language. */
+const sectionTitle = (sec: ReportSection): string =>
+  ({ day: `☀ ${tr.ui.dayPart}`, night: `🌙 ${tr.ui.nightPart}`, morning: `🌅 ${tr.ui.morningPart}` })[sec];
 
 /** Row label plus one plain sentence saying why it happened. */
 function rowText(s: GameState, r: ReportRow): { label: string; reason: string | null } {
@@ -223,7 +224,7 @@ export function SolReport({ s, sol, level, onNext }: { s: GameState; sol: number
       {sections.map((sec) => (
         <div key={sec} className="card">
           <h3>
-            {SECTION_TITLE[sec]}
+            {sectionTitle(sec)}
             {sec === 'morning' && ` (${tr.ui.sol} ${sol + 1})`}
           </h3>
           <ul className="report-list">
@@ -279,6 +280,14 @@ export function End({
           {tr.ui.lostBecause} <strong>{tr.causeName[o.cause]}</strong> ({tr.ui.sol} {o.sol})
         </p>
       )}
+      {/* The Black Box is the main next step: first, big, with one line saying what it does. */}
+      <div className="card end-next">
+        <button className="btn primary big" onClick={onBlackBox} autoFocus>
+          ⬛ {tr.ui.openBlackBox} →
+        </button>
+        <p className="lead">{extra.blackBoxLead}</p>
+        {level === 'junior' && <p className="dim small">{tr.blackbox.intro}</p>}
+      </div>
       <div className="card">
         <h3>{tr.ui.finalStats}</h3>
         <ul className="stats">
@@ -312,9 +321,6 @@ export function End({
       </div>
       <DoseCompare s={s} />
       <div className="row wrap">
-        <button className="btn primary big" onClick={onBlackBox}>
-          ⬛ {tr.ui.openBlackBox}
-        </button>
         <button className="btn" onClick={onSame}>
           🔁 {tr.ui.sameSeed}
         </button>
@@ -325,7 +331,6 @@ export function End({
           📊 {tr.data.open}
         </button>
       </div>
-      {level === 'junior' && <p className="dim small">{tr.blackbox.intro}</p>}
     </div>
   );
 }

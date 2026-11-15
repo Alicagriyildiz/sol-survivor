@@ -8,6 +8,7 @@ import { BlackBox } from './BlackBox';
 import type { Level } from './parts';
 import { Play, type LastAction, type TutorialStep } from './Play';
 import { DataScreen } from './DataViews';
+import { useLang } from './LangSwitch';
 import { Briefing, End, SolReport, Start } from './Screens';
 import { initialView, saveView, type View } from './view';
 
@@ -24,6 +25,8 @@ interface Session {
 }
 
 export function App() {
+  // Re-render the whole tree when the language changes (LangSwitch -> setLang). No remount.
+  useLang();
   const [screen, setScreen] = useState<Screen>('start');
   const [session, setSession] = useState<Session | null>(null);
   const [reportSol, setReportSol] = useState(1);

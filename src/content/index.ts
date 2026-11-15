@@ -7,7 +7,7 @@ export { RAW_SCENARIO, SCENARIO } from './scenario';
 export { TUNING, applyTuning } from './tuning';
 export { SOURCES } from './sources';
 export * as data from './data';
-export { tr, fmt } from './lang/tr';
+export { tr, fmt, extra, getLang, setLang, subscribeLang, numSuffix, numLocale, LANGS, type LangId } from './lang';
 
 /** Engine bound to the 15-sol scenario. */
 export const engine = createEngine(SCENARIO);
