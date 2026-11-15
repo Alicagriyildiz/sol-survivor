@@ -130,6 +130,15 @@ export const FAULT_WORK: Record<string, { pos: V3; look: V3 }> = {
   'hub:s7_message': HUB_PANEL,
   'hub:s15_beacon': { pos: [0.4, 1.35, -4.2], look: [0.45, 0.9, -5.6] },
   'hub:s2_pump': { pos: [-0.15, 1.3, -4.25], look: [-0.15, 0.55, -5.4] },
+  // Shelter: seated on the bench during the solar event; heater close-up.
+  'shelter:s12_spe': { pos: [-9.48, 1.15, 7.05], look: [-10.25, 1.35, 9.83] },
+  'shelter:s9_shed': { pos: [-8.79, 1.5, 9.33], look: [-9.28, 1.55, 10.69] },
+  'airlock:s13_leakA': { pos: [10.75, 1.4, -0.35], look: [11.85, 1.05, -1.0] },
+  'airlock:s8_secure': { pos: [10.8, 1.35, 0.35], look: [11.85, 0.75, 0.95] },
+  'airlock:s12_spe': { pos: [10.2, 1.4, 0.3], look: [11.3, 0.55, -0.78] },
+  'greenhouse:s13_leakB': { pos: [-14.6, 1.55, -0.75], look: [-16.5, 1.3, -1.2] },
+  'battery:s14_pump': { pos: [2.83, 1.5, -3.09], look: [3.8, 0.55, -4.1] },
+  'battery:s14_radiator': { pos: [2.83, 1.5, -3.09], look: [3.8, 0.55, -4.1] },
 };
 
 /** Waypoint graph (a tree). Inside walks go through the hab centre; EVAs through the airlock. */

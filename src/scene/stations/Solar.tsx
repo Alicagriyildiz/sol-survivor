@@ -14,7 +14,7 @@ const GRID_X = 16;
 
 const GRID_Y = 10;
 
-function SolarField({ rt, dustLevel }: { rt: MutableRefObject<RT>; dustLevel: number }) {
+function SolarField({ rt, dustLevel, age }: { rt: MutableRefObject<RT>; dustLevel: number; age: number }) {
   const cells = useRef<THREE.InstancedMesh>(null);
   const cellMat = useRef<THREE.MeshStandardMaterial>(null);
   const dustMesh = useRef<THREE.Mesh>(null);
@@ -141,7 +141,11 @@ function SolarField({ rt, dustLevel }: { rt: MutableRefObject<RT>; dustLevel: nu
     }
     // Work panel: dust layer from the canvas; level fades with the field outside a wipe.
     const wiping = r && r.run.station === 'solar' && r.run.kind === 'wipe' && PANEL_WIPE_FAULTS.includes(r.run.faultId ?? '') && (r.phase === 'do' || r.phase === 'approach');
-    if (dustMat.current) dustMat.current.opacity = wiping ? Math.max(0.0001, r!.run.from.solarDust) : d;
+    if (dustMat.current) {
+      dustMat.current.opacity = wiping ? Math.max(0.0001, r!.run.from.solarDust) : d;
+      // Dust left waiting gets thicker and darker every sol.
+      dustMat.current.color.setScalar(1 - Math.min(3, age) * 0.09);
+    }
     if (r && r.run.station === 'solar' && r.phase === 'finish') shine.current = 1;
     shine.current = Math.max(0, shine.current - dt * 0.6);
     if (workMat.current) {
@@ -398,7 +402,7 @@ export default function Solar(props: StationProps) {
   const wp = panelAt(PANEL_ROWS - 1, 0);
   return (
     <>
-      <SolarField rt={rt} dustLevel={work.solarDust} />
+      <SolarField rt={rt} dustLevel={work.solarDust} age={work.alarmAge.solar ?? 0} />
       <SandRidges {...props} />
       <Straps {...props} />
       <Radiator {...props} />

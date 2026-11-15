@@ -13,6 +13,7 @@ import { colorHex,} from '../ui/tokens';
 import { fmtHours } from '../ui/parts';
 import type { SceneLook, WorkLook } from './look';
 import { softDot, ease, now, reduceMotion, type Phase, type RT, type SceneRun, type StationProps } from './core';
+import * as sfx from './sound';
 import { DustWall, Dust, Ground, Hills, Lights, Rocks, Sky, type Quality } from './env';
 import { Hab, Roof, Yard } from './hab';
 import { Hand } from './hand';
@@ -61,6 +62,11 @@ export interface FirstPersonProps {
   hud?: ReactNode;
   hint: boolean;
 }
+
+const toggleSound = () => {
+  sfx.setSound(!sfx.soundOn());
+  return sfx.soundOn();
+};
 
 /** Phones and small touch screens: no shadows, fewer particles. */
 function detectQuality(): Quality {
@@ -302,6 +308,7 @@ function RunDriver({ rt, setPhase, bar, onDone, sparkleAt }: { rt: MutableRefObj
   const done = useRef(onDone);
   done.current = onDone;
   const autoT = useRef(0);
+  const swishT = useRef(0);
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const R = rt.current;
@@ -321,6 +328,7 @@ function RunDriver({ rt, setPhase, bar, onDone, sparkleAt }: { rt: MutableRefObj
       r.lastInput = t;
       autoT.current = 0;
       go('do');
+      sfx.click();
     } else if (r.phase === 'do') {
       const k = r.run.kind;
       const wipeHere = k === 'wipe' && r.run.station === 'solar' && PANEL_WIPE_FAULTS.includes(r.run.faultId ?? '');
@@ -341,6 +349,10 @@ function RunDriver({ rt, setPhase, bar, onDone, sparkleAt }: { rt: MutableRefObj
         }
         r.p = Math.max(r.p, Math.min(1, R.cleared / 0.85));
         if (R.brushOn && Math.random() < 0.6) R.puff(R.brush, 1);
+        if (R.brushOn && t - swishT.current > 0.18) {
+          swishT.current = t;
+          sfx.swish();
+        }
       } else {
         const speed = r.mode === 'auto' ? 1 / DO_SECONDS[k] : r.holding ? 1.25 / DO_SECONDS[k] : 0;
         r.p = Math.min(1, r.p + dt * speed);
@@ -351,6 +363,7 @@ function RunDriver({ rt, setPhase, bar, onDone, sparkleAt }: { rt: MutableRefObj
         const sp = SPOTS[r.run.station];
         const wp = (r.run.faultId && FAULT_WORK[`${r.run.station}:${r.run.faultId}`]) || sp?.work;
         if (wp && r.run.kind !== 'wait') sparkleAt.current?.(wp.look);
+        sfx.chime();
       }
     } else if (r.phase === 'finish' && t - r.t0 > FINISH_SECONDS) {
       const id = r.run.id;
@@ -493,6 +506,7 @@ export default function FirstPerson(props: FirstPersonProps) {
     skipWalk: () => false,
   });
   const [phase, setPhase] = useState<Phase>('none');
+  const [soundState, setSoundOn] = useState(sfx.soundOn);
   const quality = useMemo(detectQuality, []);
   const [auto, setAuto] = useState(false);
   const bar = useRef<HTMLDivElement | null>(null);
@@ -758,6 +772,10 @@ export default function FirstPerson(props: FirstPersonProps) {
           </div>
         )}
         {hud && <div className="fp-hud">{hud}</div>}
+        <button className="btn small ghost fp-sound" onClick={() => setSoundOn(toggleSound())} aria-pressed={soundState} title={tr.act.sound}>
+          {soundState ? '🔈' : '🔇'}
+          <span className="sr-only"> {tr.act.sound}</span>
+        </button>
         <div className="fp-dock">{dock}</div>
       </div>
       {/* Station buttons: visible strip, also the keyboard way to move. */}

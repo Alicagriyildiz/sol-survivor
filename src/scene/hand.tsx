@@ -22,7 +22,8 @@ export function toolFor(kind: ActionKind | null, at: string, faultId: string | n
     case 'replace':
       return faultId && FILTER_FAULTS.has(faultId) ? 'filter' : 'wrench';
     case 'dig':
-      return 'shovel';
+      // The shelter and the landing pad have their own shovel / push board in the scene.
+      return at === 'shelter' || at === 'landing' ? 'none' : 'shovel';
     case 'plug':
       return 'plug';
     case 'console':

@@ -62,6 +62,9 @@ export function setSlot(mesh: THREE.InstancedMesh, i: number, slot: Slot, drop =
 export function showSlots(mesh: THREE.InstancedMesh | null, slots: Slot[], count: number, lift = 0.6, inward = 0.35) {
   if (!mesh) return;
   const c = Math.max(0, Math.min(slots.length, count));
+  // Nothing moves: skip the upload.
+  if (mesh.userData.shown === c && c === Math.floor(c)) return;
+  mesh.userData.shown = c;
   const n = Math.floor(c);
   const f = c - n;
   const shown = f > 0.001 && n < slots.length ? n + 1 : n;

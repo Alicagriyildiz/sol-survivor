@@ -405,3 +405,16 @@ a { color: var(--c-accent); }
   .fp-dock .inv li { font-size: 0.85rem; padding: 0.1rem 0.3rem; }
   .fp-dock .end-btn { font-size: 0.95rem; padding: 0.45rem 0.7rem; }
 }
+.fp-sound { position: absolute; right: 12px; bottom: 12px; z-index: 4; background: rgba(21, 29, 54, 0.8); }
+/* 3D: helmet-display look for the HUD (same language as the scene overlays). */
+.play.view-3d .topbar {
+  background: linear-gradient(180deg, rgba(21, 29, 54, 0.97), rgba(29, 39, 69, 0.94));
+  border-bottom: 1px solid rgba(56, 208, 214, 0.45);
+  box-shadow: 0 2px 14px rgba(56, 208, 214, 0.12);
+}
+.play.view-3d .mission { border-color: rgba(56, 208, 214, 0.55); box-shadow: 0 0 12px rgba(56, 208, 214, 0.1); }
+.play.view-3d .fp-canvas { border-color: rgba(56, 208, 214, 0.5); box-shadow: 0 0 0 1px rgba(10, 15, 30, 0.6), 0 8px 26px rgba(5, 10, 25, 0.45); }
+.fp-label { backdrop-filter: blur(2px); }
+.fp-label::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 2px; height: 6px; background: rgba(188, 197, 218, 0.7); }
+.fp-run { backdrop-filter: blur(3px); }
+.fp-run-title strong { letter-spacing: 0.01em; }

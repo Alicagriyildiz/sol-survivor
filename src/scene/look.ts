@@ -59,6 +59,8 @@ export interface WorkLook {
   age: Record<string, number>;
   /** Flags that are set (true). */
   flags: Record<string, boolean>;
+  /** Times each maintenance job was done in the mission (results that pile up, e.g. bags). */
+  routines: Record<string, number>;
   /** Modifiers active tonight (ids). */
   mods: string[];
   /** Base power: lights and screens. */
@@ -95,6 +97,13 @@ export function workLook(s: GameState, stationOf: (faultId: string) => string): 
     age[f.faultId] = Math.max(0, s.sol - f.firstSol);
     alarmAge[st] = Math.max(alarmAge[st] ?? 0, age[f.faultId]!);
   }
+  const routines: Record<string, number> = {};
+  const seen = new Set<string>();
+  for (const e of s.trace) {
+    if (e.source.kind !== 'routine' || seen.has(e.key)) continue;
+    seen.add(e.key);
+    routines[e.source.id] = (routines[e.source.id] ?? 0) + 1;
+  }
   const flags: Record<string, boolean> = {};
   for (const [k, v] of Object.entries(s.flags)) if (v?.value) flags[k] = true;
   const p = resourceStatus(s.res.power, s.config.rules);
@@ -107,6 +116,7 @@ export function workLook(s: GameState, stationOf: (faultId: string) => string): 
     open: s.faults.map((f) => f.faultId),
     age,
     flags,
+    routines,
     mods: s.modifiers.map((m) => m.id),
     power: p === 'ok' ? 'on' : p === 'low' ? 'dim' : 'off',
     charge: Math.max(0, Math.min(1, s.res.power / 100)),

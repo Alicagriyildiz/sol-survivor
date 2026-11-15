@@ -1,45 +1,33 @@
-# 3D sahne planı
+# 3D: birinci şahıs Mars (Oturum 6)
 
-> **Durum (Oturum 5, 2026-11-15): yapıldı.** Ayrıntılar `docs/PROGRESS.md` Oturum 5 ve `docs/DESIGN.md` §6c.
-> Plandan sapmalar: (1) çıplak `three` yerine istenen `three` + `@react-three/fiber` + `@react-three/drei` (yalnızca `Instances`);
-> (2) yürüme süresi saat tablosundan değil mesafeden, en çok 1,5 sn (mesai bedeli panelde yazar);
-> (3) istasyon adları `drei/Html` yerine sahnenin üstünde düz DOM katmanı (React 19'da `Html` her etiket için ayrı kök açıp
-> "synchronously unmount" hatası veriyordu; ayrıca kamera sabit olduğundan etiket konumu yalnız ekran boyutu değişince hesaplanır);
-> (4) kod `src/scene/` altında: `layout.ts` (yerleşim, yol noktaları, kamera izdüşümü; saf, testli), `look.ts` (durumdan görseller; saf, testli),
-> `Scene3D.tsx` (geç yüklenen parça). Toz için parçacık yerine CSS katmanı.
+> Oturum 5'teki sabit izometrik sahne (`Scene3D.tsx`, `layout.ts`) silindi. Yerine birinci şahıs görünüm geldi:
+> oyuncu bir seçenek seçince iş astronotun gözünden yapılır (ya da oyuncu basit bir hareketle kendisi yapar)
+> ve sonuç dünyada kalır. Ayrıntılı kurallar `docs/DESIGN.md` §6d, sunum yolu `docs/DEMO.md`.
 
-## İlk plan (Oturum 1-4)
+## Kesin kararlar
+- Fizik motoru, çarpışma, serbest dolaşım (WASD) **yok**. Hareket tıklamayla, sabit yol noktalarından; atlanabilir.
+- Bakış sürüklemeyle (fare / parmak); işaretçi kilidi yok, düğmeler hep tıklanabilir.
+- 3D çekirdeğe yalnız `engine.step` + seçicilerle bağlanır. Seçim anında adım bir kez işlenir; animasyon sonra oynar
+  ve atlansa da durum doğrudur. Görünüm durumdan türetilir (`sceneLook`, `workLook`), sahne oyun durumu saklamaz.
+- Eylem türü (8 tür) yalnız sunum bilgisidir: `src/content/actions.ts`; çekirdek bilmez, sayı değiştirmez; test her
+  seçeneğin bir türü olduğunu denetler.
+- Renkler `src/ui/tokens.ts`. Turuncu/amber yok; Kenney modellerinin malzemeleri yüklenirken palete çevrilir.
+- 3D ayrı ve geç yüklenen parça; yüklenirken, WebGL yoksa ya da hata olursa kartlı ekran. "3D / Sade" seçimi kalır.
 
-Amaç: mevcut 2D geçici arayüzün **istasyon ızgarasının yerine** sabit açılı, düşük poligonlu bir 3D üs
-sahnesi koymak. Paneller, üst çubuk, raporlar ve Kara Kutu aynen kalır. 3D yetişmezse 2D arayüz sunumda kullanılır,
-o yüzden 2D her an çalışır kalmalı (özellik bayrağıyla geçiş).
+## Dosyalar (`src/scene/`)
+| Dosya | İçerik |
+|---|---|
+| `world.ts` | Saf yerleşim: istasyon noktaları (durma, bakış, yakın iş pozu, etiket), yol grafiği, yürüme süresi, arazi yüksekliği, işe özel kamera pozları (`FAULT_WORK`). Testli (`tests/world.test.ts`). |
+| `look.ts` | `sceneLook` (ışık, fırtına, gece, Sol 12) ve `workLook` (son seçimler, açık arızalar ve yaşları, bayraklar, değiştiriciler, güç). |
+| `core.tsx` | Kare başına ortak durum (`RT`), çalışan iş (`stationAct`, `shownWork`), pahlı kutu, durum lambası, kapı, Kenney model yükleyici (yedek şekilli), parçacık çeşmesi. |
+| `env.tsx` | Gökyüzü (gündüz pembe-mor, gece yıldızlı, fırtına bulanık, Sol 12 mor perdeler), güneş + dolgu ışığı + gölge + ACES ton eşleme, engebeli ve renkli zemin, araç izleri, uzak tepe silueti, kayalar, uçuşan toz, fırtına toz duvarı. |
+| `hab.tsx` | Yuvarlak üs: duvar parçaları, kapılar, pencereler, tavan ışıkları (güçle kararır), borular, masa, dolaplar, zemin çizgileri; çatıda dönen çanak; dış avlu. |
+| `hand.tsx` | Eldiven ve işe göre alet (fırça, bant, anahtar/kartuş, kürek, fiş, tablet; şalterde açık el). |
+| `sound.ts` | Tarayıcıda üretilen kısa sesler (dosya yok), varsayılan kısık, kapatılabilir. |
+| `stations/*.tsx` | İstasyon başına iş noktası ve işler: `Hub`, `Solar`, `Battery`, `Greenhouse`, `Shelter`, `Airlock`, `Landing`. |
+| `FirstPerson.tsx` | Kamera ve yürüyüş, iş sürücüsü (yaklaş → yap → bitir), etiketler, yön oku, iş kutusu, alt çubuk. |
 
-## Kesin kararlar (değiştirmeyin)
-- Fizik motoru **yok**.
-- **Sabit açılı kamera** (hafif eğik kuşbakışı). Kullanıcı kamerayı döndürmez.
-- Astronot tıklanan istasyona **önceden tanımlı yol noktaları** (waypoint) üzerinden yürür; çarpışma hesabı yok.
-- Yürüme süresi **tablodan** gelir (çekirdeğin `optionCost`/`routineCost` değeri); animasyon **atlanabilir** (tıkla → anında varış).
-- İstasyon içleri modellenmez; tıklayınca **mevcut paneller** (`StationPanel`) açılır.
-- Sadece düşük poligonlu temel şekiller (kutu, silindir, koni, düzlem). **Dış model/doku/font dosyası yok.**
-- 3D katman çekirdeğe yalnızca 2D arayüzün kullandığı **aynı arabirimle** bağlanır: `engine.step(state, action)` + `src/sim/selectors.ts`. Çekirdeğe 3D'ye özel kod eklenmez.
-- Renkler `src/ui/tokens.ts` → `colorHex` (turuncu/amber yok).
-
-## Teknik plan
-1. `npm i three` (tek yeni bağımlılık; `@types/three` dev). Sürümü sabitleyin.
-2. `src/scene/` klasörü:
-   - `layout.ts`: istasyon id → 3D konum (x, z), yol noktası grafiği (koridor merkezi = ana üs). EVA istasyonları kubbenin dışında, hava kilidi kapısından geçen yol.
-   - `BaseScene.ts`: `three` sahnesi, ortografik ya da dar açılı perspektif kamera, yön + ortam ışığı, Mars zemini (düzlem, `marsBrown`), kubbeler (yarım küre/silindir, `surface2`), paneller (ince kutular), iniş alanı (daire).
-   - `Astronaut.ts`: kapsül/silindir + küre; yol noktaları boyunca doğrusal interpolasyon; `skip` ile anında konum.
-   - `picking.ts`: Raycaster ile istasyon tıklama → React tarafına `onStationClick(id)`.
-3. `src/ui/Scene3D.tsx`: canvas'ı saran React bileşeni. Props: `stations: StationView[]`, `location`, `onStationClick`. Arıza olan istasyonlarda yüzen uyarı işareti (koni + `warn` rengi) **ve** DOM üstü etiket (renk tek başına yetmez: simge + metin).
-4. `Play.tsx` içinde `stations` bölümünü bayrakla değiştirin: `?view=3d` ya da Başlangıç ekranında seçim. Varsayılan 2D kalabilir, 3D sağlam olunca varsayılan yapılır.
-5. Durum görselleştirme (sadece okuma): Güç düşükse ışıklar kısılır; fırtına bayrağında sis/toz parçacıkları (basit `Points`); Kalkan düşükse sığınak kubbesi `danger` kenar çizgisi. Hepsi `GameState`'ten türetilir; sahne kendi durumunu tutmaz.
-6. Eylem akışı: kullanıcı panelden seçeneği seçer → `act(action)` → yeni durum → astronot `location`'a yürür (animasyon süresi = saat × sabit, "Atla" düğmesi). Animasyon bitmeden yeni eylem kabul edilebilir; sahne en son duruma atlar.
-7. Performans: tek sahne, < 200 mesh, gölgeler kapalı ya da tek yönlü ışıkla basit; `requestAnimationFrame` sadece animasyon/etkileşim varken.
-8. Test: sahne mantığı (layout, yol bulma, waypoint interpolasyonu) saf fonksiyon olarak `tests/scene.test.ts` ile; görsel kontrol elle + ekran görüntüsü.
-
-## Zaman kutusu
-- 1 saat: sahne + kubbeler + tıklama → panel açılıyor.
-- +1 saat: astronot yürüyüşü + atla.
-- +1 saat: durum görselleri (ışık, fırtına, uyarı işaretleri).
-- Bir adım takılırsa: 2D'ye geri dön, sunumda 2D'yi kullan.
+## Kalan işler / fikirler
+- Gerçek GPU'lu dizüstü ve gerçek telefonda akıcılık ölçümü (yalnız yazılım WebGL ile denendi).
+- Panel tozunun ertelenen günlerle koyulaşması (şimdilik lamba hızlanıyor).
+- İç mekânların ses ortamı (fan uğultusu), adım sesleri.
