@@ -28,6 +28,15 @@ bakım düğmesi yok. Genç'te yalnız "En zayıf gösterge: X (n)" notu. Yeni b
 izleyen): Komutan %0, Genç %77.5 (1-200 ve 201-400). Dikkatli Komutan %44 / %46.5, rastgele %2.5 / %0, boş %0;
 Sol 1 kaybı yok. COMMANDER_CONFIG değişmedi (57/61).
 
+**Tam ekran 3D düzeni.** 3D oyun ekranı görünür alanı kaplar, sayfa kaymaz (1920×1080, 1366×768, 1280×720,
+390 px ölçüldü). Üst çubuk tek satır (57 px); görev satırı, uyarılar, envanter, "Günü bitir" ve istasyon düğmeleri
+sahnenin üstünde. Arıza paneli kendi içinde kayar. Bilinen: 1280'de panel açıkken en sağdaki istasyon düğmesi altta kalır.
+
+**Giriş ekranı** (`Start` in `src/ui/Screens.tsx`, arka plan `src/scene/Backdrop.tsx`): oyun ana menüsü. Arkada yavaş
+dönen 3D üs (Sade seçiliyse ya da WebGL yoksa düz koyu zemin), büyük "SOL / SURVIVOR" başlığı, tek Başla düğmesi,
+tek satır ikincil seçenekler, "Nasıl oynanır?" penceresi, alt satırda Space Apps ve NASA açık verisi notu. Emoji yok.
+Önce/sonra: `docs/screenshots/once-giris-*.png` ↔ `sonra-giris-*.png`. Güneş diski kadrajda değil.
+
 **Doğrulanmadı:** gerçek GPU / telefon akıcılığı (ışık şiddeti ve modeller arttı, gölge haritası aynı; yeni 6 model,
 ~70 instanced direk). Bitiş sahnesinde kalkışta ön planda bulanık varil görünebiliyor.
 
