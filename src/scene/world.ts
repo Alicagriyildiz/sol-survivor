@@ -119,9 +119,17 @@ export const SPOTS: Record<string, Spot> = {
 export const PANEL_WIPE_FAULTS = ['s4_dust', 's11_panels'];
 /** Radiator next to the solar field (Sol 14 variant). */
 export const RADIATOR: V3 = [18.6, 0, -11.6];
-/** Close-up poses for jobs that are not at the station's main work object. */
+/** Close-up poses for jobs that are not at the station's main work object, keyed `station:faultId`. */
+const HUB_PANEL = { pos: [0.15, 1.7, -3.95] as V3, look: [0.15, 1.5, -5.6] as V3 };
 export const FAULT_WORK: Record<string, { pos: V3; look: V3 }> = {
-  s14_radiator: { pos: [18.6, 1.75, -10.0], look: [18.6, 0.85, -11.6] },
+  'solar:s14_radiator': { pos: [18.6, 1.75, -10.0], look: [18.6, 0.85, -11.6] },
+  // Hub bay: fans, levers and screen (switch / console / plug jobs), pump at the bottom.
+  'hub:s1_wakeup': HUB_PANEL,
+  'hub:s4_dust': HUB_PANEL,
+  'hub:s5_oxygen': HUB_PANEL,
+  'hub:s7_message': HUB_PANEL,
+  'hub:s15_beacon': { pos: [0.4, 1.35, -4.2], look: [0.45, 0.9, -5.6] },
+  'hub:s2_pump': { pos: [-0.15, 1.3, -4.25], look: [-0.15, 0.55, -5.4] },
 };
 
 /** Waypoint graph (a tree). Inside walks go through the hab centre; EVAs through the airlock. */

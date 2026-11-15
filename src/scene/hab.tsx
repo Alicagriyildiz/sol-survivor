@@ -240,6 +240,26 @@ export function Hab({ rt, look }: { rt: MutableRefObject<RT>; look: SceneLook })
   );
 }
 
+/** Outside the hab: generator, tanks, crates, a parked cargo sled — the base looks lived-in. */
+export function Yard() {
+  const items: [Parameters<typeof Model>[0]['name'], V3, number, number][] = [
+    ['machine_generatorLarge', [7.6, 0, -5.4], 2.2, 0.6],
+    ['machine_barrelLarge', [9.6, 0, 3.4], 1.8, 0.2],
+    ['barrels', [13.6, 0, 2.6], 2.2, 1.2],
+    ['barrel', [14.2, 0, -2.4], 1.8, 0],
+    ['craft_cargoA', [3.5, 0, 9.5], 2.4, 2.4],
+    ['supports_low', [-2.0, 0, -8.2], 2.4, 0.3],
+    ['machine_wirelessCable', [-7.5, 0, -6.5], 2.0, 2.2],
+  ];
+  return (
+    <group>
+      {items.map(([name, p, sc, ry], i) => (
+        <Model key={i} name={name} position={p} scale={sc} rotation={[0, ry, 0]} />
+      ))}
+    </group>
+  );
+}
+
 /** Hab roof outside: dish that turns, vents, blinking lights. */
 export function Roof() {
   const dish = useRef<THREE.Group>(null);

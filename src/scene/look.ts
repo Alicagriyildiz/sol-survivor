@@ -49,6 +49,8 @@ export interface WorkLook {
   filter: 'ok' | 'clogged' | 'new' | 'taped';
   /** Open fault at a station: its warning light is red and blinking. */
   alarm: Record<string, boolean>;
+  /** Oldest open fault per station, in sols waited (deferred problems look worse). */
+  alarmAge: Record<string, number>;
   /** Latest option chosen for each fault (any sol; 'defer' included). */
   chosen: Record<string, string>;
   /** Faults open right now. */
@@ -85,10 +87,13 @@ export function workLook(s: GameState, stationOf: (faultId: string) => string): 
   }
   if (s.faults.some((f) => FILTER_FAULTS.includes(f.faultId))) filter = 'clogged';
   const alarm: Record<string, boolean> = {};
+  const alarmAge: Record<string, number> = {};
   const age: Record<string, number> = {};
   for (const f of s.faults) {
-    alarm[stationOf(f.faultId)] = true;
+    const st = stationOf(f.faultId);
+    alarm[st] = true;
     age[f.faultId] = Math.max(0, s.sol - f.firstSol);
+    alarmAge[st] = Math.max(alarmAge[st] ?? 0, age[f.faultId]!);
   }
   const flags: Record<string, boolean> = {};
   for (const [k, v] of Object.entries(s.flags)) if (v?.value) flags[k] = true;
@@ -97,6 +102,7 @@ export function workLook(s: GameState, stationOf: (faultId: string) => string): 
     solarDust,
     filter,
     alarm,
+    alarmAge,
     chosen,
     open: s.faults.map((f) => f.faultId),
     age,

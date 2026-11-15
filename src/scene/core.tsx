@@ -107,17 +107,20 @@ export function Lamp({ station, rt, work, at, size = 0.07 }: { station: string; 
   const mat = useRef<THREE.MeshStandardMaterial>(null);
   const halo = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
-    const r = rt.current.run;
-    const alarm = showsBefore(rt.current, station) ? !!r!.run.from.alarm[station] : !!work.alarm[station];
+    const before = showsBefore(rt.current, station);
+    const w = before ? rt.current.run!.run.from : work;
+    const alarm = !!w.alarm[station];
+    // A problem left waiting blinks faster and wider every sol.
+    const age = Math.min(3, w.alarmAge?.[station] ?? 0);
     const m = mat.current;
     if (!m) return;
-    const on = alarm ? (Math.sin(clock.elapsedTime * 7) > 0 ? 1 : 0.15) : 1;
+    const on = alarm ? (Math.sin(clock.elapsedTime * (6 + age * 4)) > 0 ? 1 : 0.15) : 1;
     m.color.setHex(alarm ? colorHex.danger : colorHex.ok);
     m.emissive.setHex(alarm ? colorHex.danger : colorHex.ok);
-    m.emissiveIntensity = (alarm ? 2.2 : 1.2) * on;
+    m.emissiveIntensity = (alarm ? 2.2 : 1.2) * on * powerGlow(work.power === 'off' ? 'dim' : 'on');
     if (halo.current) {
       halo.current.visible = alarm;
-      halo.current.scale.setScalar(1 + on * 0.8);
+      halo.current.scale.setScalar(1 + on * (0.8 + age * 0.6));
     }
   });
   return (
@@ -128,7 +131,7 @@ export function Lamp({ station, rt, work, at, size = 0.07 }: { station: string; 
       </mesh>
       <mesh ref={halo} visible={false}>
         <sphereGeometry args={[size * 1.5, 12, 8]} />
-        <meshBasicMaterial color={colorHex.danger} transparent opacity={0.12} depthWrite={false} />
+        <meshBasicMaterial color={colorHex.danger} transparent opacity={0.14} depthWrite={false} />
       </mesh>
     </group>
   );

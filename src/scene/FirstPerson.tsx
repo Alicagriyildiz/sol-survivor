@@ -12,9 +12,9 @@ import type { StationInfo } from '../ui/stationInfo';
 import { colorHex,} from '../ui/tokens';
 import { fmtHours } from '../ui/parts';
 import type { SceneLook, WorkLook } from './look';
-import { ease, now, reduceMotion, type Phase, type RT, type SceneRun, type StationProps } from './core';
+import { softDot, ease, now, reduceMotion, type Phase, type RT, type SceneRun, type StationProps } from './core';
 import { DustWall, Dust, Ground, Hills, Lights, Rocks, Sky, type Quality } from './env';
-import { Hab, Roof } from './hab';
+import { Hab, Roof, Yard } from './hab';
 import { Hand } from './hand';
 import Hub from './stations/Hub';
 import Battery from './stations/Battery';
@@ -91,6 +91,49 @@ const standPos = (id: string) => {
 
 // ------------------------------------------------------------------ puffs (dust from brushing)
 
+/** Teal sparkles that burst out when a job is finished. */
+function Sparkles({ hook }: { hook: MutableRefObject<((p: V3) => void) | null> }) {
+  const N = 60;
+  const ref = useRef<THREE.Points>(null);
+  const mat = useRef<THREE.PointsMaterial>(null);
+  const st = useMemo(() => ({ pos: new Float32Array(N * 3).fill(-999), vel: new Float32Array(N * 3), t: 99 }), []);
+  useLayoutEffect(() => {
+    hook.current = (p) => {
+      for (let i = 0; i < N; i++) {
+        const a = i * 2.399;
+        const up = (i % 7) / 7;
+        st.pos[i * 3] = p[0];
+        st.pos[i * 3 + 1] = p[1];
+        st.pos[i * 3 + 2] = p[2];
+        st.vel[i * 3] = Math.cos(a) * (0.6 + up * 0.8);
+        st.vel[i * 3 + 1] = 0.6 + up * 1.4;
+        st.vel[i * 3 + 2] = Math.sin(a) * (0.6 + up * 0.8);
+      }
+      st.t = 0;
+    };
+  }, [hook, st]);
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    if (st.t > 1.4) return;
+    st.t += dt;
+    for (let i = 0; i < N * 3; i++) {
+      if (i % 3 === 1) st.vel[i]! -= 1.6 * dt;
+      st.pos[i]! += st.vel[i]! * dt;
+    }
+    if (st.t > 1.4) st.pos.fill(-999);
+    if (mat.current) mat.current.opacity = Math.max(0, 1 - st.t / 1.4);
+    if (ref.current) (ref.current.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+  });
+  return (
+    <points ref={ref} frustumCulled={false}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[st.pos, 3]} />
+      </bufferGeometry>
+      <pointsMaterial ref={mat} map={softDot()} color={colorHex.accent} size={0.09} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+    </points>
+  );
+}
+
 function Puffs({ rt }: { rt: MutableRefObject<RT> }) {
   const N = 90;
   const ref = useRef<THREE.Points>(null);
@@ -158,7 +201,7 @@ function Eyes({ rt, goal, onArrive }: { rt: MutableRefObject<RT>; goal: string; 
   const face = (id: string, close = false, faultId: string | null = null) => {
     const s = SPOTS[id] ?? SPOTS.hub!;
     const R = rt.current;
-    const wp = (faultId && FAULT_WORK[faultId]) || s.work;
+    const wp = (faultId && FAULT_WORK[`${id}:${faultId}`]) || s.work;
     const from: V3 = close ? wp.pos : [s.stand[0], EYE, s.stand[1]];
     const to = close ? wp.look : s.look;
     R.tPos.set(from[0], from[1], from[2]);
@@ -255,7 +298,7 @@ const DO_SECONDS: Record<ActionKind, number> = { wipe: 3.4, patch: 2.4, replace:
 const AUTO_AFTER = 5;
 const FINISH_SECONDS = 1.5;
 
-function RunDriver({ rt, setPhase, bar, onDone }: { rt: MutableRefObject<RT>; setPhase: (p: Phase) => void; bar: MutableRefObject<HTMLDivElement | null>; onDone: (id: number) => void }) {
+function RunDriver({ rt, setPhase, bar, onDone, sparkleAt }: { rt: MutableRefObject<RT>; setPhase: (p: Phase) => void; bar: MutableRefObject<HTMLDivElement | null>; onDone: (id: number) => void; sparkleAt: MutableRefObject<((p: V3) => void) | null> }) {
   const done = useRef(onDone);
   done.current = onDone;
   const autoT = useRef(0);
@@ -302,7 +345,13 @@ function RunDriver({ rt, setPhase, bar, onDone }: { rt: MutableRefObject<RT>; se
         const speed = r.mode === 'auto' ? 1 / DO_SECONDS[k] : r.holding ? 1.25 / DO_SECONDS[k] : 0;
         r.p = Math.min(1, r.p + dt * speed);
       }
-      if (r.p >= 1) go('finish');
+      if (r.p >= 1) {
+        go('finish');
+        // Satisfying moment: a burst of teal sparkles at the job.
+        const sp = SPOTS[r.run.station];
+        const wp = (r.run.faultId && FAULT_WORK[`${r.run.station}:${r.run.faultId}`]) || sp?.work;
+        if (wp && r.run.kind !== 'wait') sparkleAt.current?.(wp.look);
+      }
     } else if (r.phase === 'finish' && t - r.t0 > FINISH_SECONDS) {
       const id = r.run.id;
       R.run = null;
@@ -388,6 +437,22 @@ function LoadingNote() {
   );
 }
 
+/** Dev only: frame stats on window.__fp (draw calls, triangles, fps) for performance checks. */
+function DevStats() {
+  const gl = useThree((s) => s.gl);
+  const acc = useRef({ n: 0, t: 0 });
+  useFrame((_, dt) => {
+    if (!import.meta.env.DEV) return;
+    acc.current.n++;
+    acc.current.t += dt;
+    if (acc.current.t > 1) {
+      (window as unknown as { __fp: unknown }).__fp = { calls: gl.info.render.calls, tris: gl.info.render.triangles, fps: Math.round(acc.current.n / acc.current.t), geos: gl.info.memory.geometries };
+      acc.current = { n: 0, t: 0 };
+    }
+  });
+  return null;
+}
+
 function ContextWatch({ onLost }: { onLost: () => void }) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
@@ -431,6 +496,7 @@ export default function FirstPerson(props: FirstPersonProps) {
   const quality = useMemo(detectQuality, []);
   const [auto, setAuto] = useState(false);
   const bar = useRef<HTMLDivElement | null>(null);
+  const sparkleAt = useRef<((p: V3) => void) | null>(null);
   const labels = useRef<Record<string, HTMLDivElement | null>>({});
   const arrow = useRef<HTMLDivElement | null>(null);
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
@@ -575,6 +641,7 @@ export default function FirstPerson(props: FirstPersonProps) {
           camera={{ fov: 70, near: 0.05, far: 600, position: [0, EYE, 0] }}
         >
           <ContextWatch onLost={onLost} />
+          <DevStats />
           <Sky look={look} />
           <Lights look={look} quality={quality} />
           <Dust look={look} quality={quality} />
@@ -589,6 +656,7 @@ export default function FirstPerson(props: FirstPersonProps) {
             <Hub {...sp} />
           </group>
           <Roof />
+          <Yard />
           <group {...hit('battery')}>
             <Battery {...sp} />
           </group>
@@ -609,9 +677,10 @@ export default function FirstPerson(props: FirstPersonProps) {
             <Landing {...sp} />
           </group>
           <Puffs rt={rt} />
+          <Sparkles hook={sparkleAt} />
           <Hand rt={rt} />
           <Eyes rt={rt} goal={goal} onArrive={onArrive} />
-          <RunDriver rt={rt} setPhase={setPhase} bar={bar} onDone={onRunDone} />
+          <RunDriver rt={rt} setPhase={setPhase} bar={bar} onDone={onRunDone} sparkleAt={sparkleAt} />
           <Overlay rt={rt} labels={labels} arrow={arrow} target={target} stations={stations} />
         </Canvas>
         <div className="fp-visor" aria-hidden />

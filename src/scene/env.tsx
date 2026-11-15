@@ -193,7 +193,7 @@ function distToTracks(x: number, z: number): number {
 
 export function Ground() {
   const geo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(700, 700, 220, 220);
+    const g = new THREE.PlaneGeometry(700, 700, 160, 160);
     g.rotateX(-Math.PI / 2);
     g.translate(10, 0, 0);
     const pos = g.attributes.position!;
