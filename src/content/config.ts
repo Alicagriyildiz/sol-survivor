@@ -30,3 +30,19 @@ export const DEFAULT_CONFIG: MissionConfig = {
 };
 
 export const ITEMS = ['patchKit', 'spareFilter', 'tape'] as const;
+
+export type Level = 'junior' | 'commander';
+
+/** Commander ("Komutan") mission: same scenario, same rules, but the base starts with less
+ *  Power and Life Support (60 instead of 70). Ten points sounds small, but it removes the
+ *  slack a careful player has before the storm (sol 9) and the solar event (sol 12).
+ *  Bot targets (tests/commander.test.ts, seeds 1-200): careful 40-60%, random < 8%,
+ *  doing nothing 0%, no loss on sol 1. */
+export const COMMANDER_CONFIG: MissionConfig = {
+  ...DEFAULT_CONFIG,
+  start: { ...DEFAULT_CONFIG.start, power: 60, life: 60 },
+};
+
+export function configFor(level: Level): MissionConfig {
+  return level === 'commander' ? COMMANDER_CONFIG : DEFAULT_CONFIG;
+}

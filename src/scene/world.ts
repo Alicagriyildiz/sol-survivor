@@ -51,7 +51,15 @@ export function panelAt(row: number, col: number): V3 {
 export const LANDING_AT: V2 = [30, 20];
 export const GREENHOUSE_AT: V2 = [-12.5, 0];
 export const GREENHOUSE_R = 4.4;
-export const SHELTER_AT: V2 = [-8, 10];
+/** Buried shelter: a small round room out along the 235° ray from the hab, reached by a tunnel. */
+export const SHELTER_DEG = 225;
+export const SHELTER_DIST = 12;
+export const SHELTER_R = 2.4;
+export const SHELTER_H = 2.2;
+const sDir: V2 = [Math.cos((SHELTER_DEG * Math.PI) / 180), -Math.sin((SHELTER_DEG * Math.PI) / 180)];
+export const SHELTER_AT: V2 = [sDir[0] * SHELTER_DIST, sDir[1] * SHELTER_DIST];
+/** Battery rack: on the hab wall at this angle. */
+export const BATTERY_DEG = 40;
 
 export const SPOTS: Record<string, Spot> = {
   hub: {
@@ -69,10 +77,11 @@ export const SPOTS: Record<string, Spot> = {
     outside: false,
   },
   shelter: {
-    stand: [-2.3, 3.0],
-    look: wallPoint(235, 1.1, 0.2),
-    work: { pos: wallPoint(235, 1.5, 1.5), look: wallPoint(235, 1.0, 0.2) },
-    label: wallPoint(235, 2.6, 0.3),
+    // Inside the shelter room, facing its far (outer) wall, where the thick wall is built.
+    stand: [SHELTER_AT[0] - sDir[0] * 0.9, SHELTER_AT[1] - sDir[1] * 0.9],
+    look: [SHELTER_AT[0] + sDir[0] * 2.0, 1.0, SHELTER_AT[1] + sDir[1] * 2.0],
+    work: { pos: [SHELTER_AT[0] + sDir[0] * 0.5, 1.45, SHELTER_AT[1] + sDir[1] * 0.5], look: [SHELTER_AT[0] + sDir[0] * 2.2, 0.8, SHELTER_AT[1] + sDir[1] * 2.2] },
+    label: [SHELTER_AT[0], SHELTER_H + 1.6, SHELTER_AT[1]],
     outside: false,
   },
   greenhouse: {
@@ -109,6 +118,7 @@ export const SPOTS: Record<string, Spot> = {
 /** Waypoint graph (a tree). Inside walks go through the hab centre; EVAs through the airlock. */
 const NODES: Record<string, V2> = {
   centre: [0, 0],
+  shHatch: [sDir[0] * (HAB_R - 0.6), sDir[1] * (HAB_R - 0.6)],
   ghDoor: [-HAB_R - 0.6, 0],
   alIn: AIRLOCK_IN,
   alOut: AIRLOCK_OUT,
@@ -118,7 +128,8 @@ const NODES: Record<string, V2> = {
 const EDGES: [string, string][] = [
   ['centre', 'hub'],
   ['centre', 'battery'],
-  ['centre', 'shelter'],
+  ['centre', 'shHatch'],
+  ['shHatch', 'shelter'],
   ['centre', 'ghDoor'],
   ['ghDoor', 'greenhouse'],
   ['centre', 'alIn'],

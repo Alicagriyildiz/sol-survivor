@@ -33,6 +33,9 @@ interface PlayRun {
   kind: ActionKind;
   station: string;
   label: string;
+  faultId: string | null;
+  optionId: string | null;
+  routineId: string | null;
 }
 let runIds = 0;
 const stationOf = (faultId: string) => engine.fault(faultId).station;
@@ -40,11 +43,11 @@ const stationOf = (faultId: string) => engine.fault(faultId).station;
 function runFor(s: GameState, a: Action): PlayRun | null {
   if (a.type === 'resolve') {
     const o = engine.option(a.faultId, a.optionId);
-    return { id: ++runIds, before: s, kind: optionAction(a.faultId, a.optionId), station: o.station ?? engine.fault(a.faultId).station, label: optionLabel(a.faultId, a.optionId) };
+    return { id: ++runIds, before: s, kind: optionAction(a.faultId, a.optionId), station: o.station ?? engine.fault(a.faultId).station, label: optionLabel(a.faultId, a.optionId), faultId: a.faultId, optionId: a.optionId, routineId: null };
   }
   if (a.type === 'routine') {
     const r = engine.routine(a.routineId);
-    return { id: ++runIds, before: s, kind: routineAction(a.routineId), station: r.station, label: tr.routines[a.routineId]!.label };
+    return { id: ++runIds, before: s, kind: routineAction(a.routineId), station: r.station, label: tr.routines[a.routineId]!.label, faultId: null, optionId: null, routineId: a.routineId };
   }
   return null;
 }
@@ -624,7 +627,7 @@ export function Play({
   };
 
   const sceneRun: SceneRun | null = run
-    ? { id: run.id, kind: run.kind, station: run.station, label: run.label, hours: run.before.hoursLeft - s.hoursLeft, from: workLook(run.before, stationOf), to: workLook(s, stationOf) }
+    ? { id: run.id, kind: run.kind, station: run.station, faultId: run.faultId, optionId: run.optionId, routineId: run.routineId, label: run.label, hours: run.before.hoursLeft - s.hoursLeft, from: workLook(run.before, stationOf), to: workLook(s, stationOf) }
     : null;
   const endButton = m.kind !== 'done' && (
     <button className="btn big end-btn" disabled={endLocked || busy} onClick={endDay} title={endLocked ? tr.ui.sol1Locked : undefined}>

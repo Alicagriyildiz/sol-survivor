@@ -40,7 +40,8 @@ export function sceneLook(s: GameState, night = false): SceneLook {
 
 // ------------------------------------------------------------------ work points
 
-/** How each station's work object looks, from the state (so results stay in later sols). */
+/** How each station's work object looks, from the state (so results stay in later sols).
+ *  Presentation only: derived through the state, never stored by the scene. */
 export interface WorkLook {
   /** Dust on the solar panels: 0 clean, 0.5 half, 1 dusty. */
   solarDust: number;
@@ -48,6 +49,22 @@ export interface WorkLook {
   filter: 'ok' | 'clogged' | 'new' | 'taped';
   /** Open fault at a station: its warning light is red and blinking. */
   alarm: Record<string, boolean>;
+  /** Latest option chosen for each fault (any sol; 'defer' included). */
+  chosen: Record<string, string>;
+  /** Faults open right now. */
+  open: string[];
+  /** Sols an open fault has been waiting (0 = new today): deferred problems look worse. */
+  age: Record<string, number>;
+  /** Flags that are set (true). */
+  flags: Record<string, boolean>;
+  /** Modifiers active tonight (ids). */
+  mods: string[];
+  /** Base power: lights and screens. */
+  power: 'on' | 'dim' | 'off';
+  /** Battery charge 0..1 (Power resource / 100). */
+  charge: number;
+  sol: number;
+  storm: boolean;
 }
 
 const HALF_DUST = /half/i;
@@ -58,6 +75,8 @@ export function workLook(s: GameState, stationOf: (faultId: string) => string): 
   for (const m of s.modifiers) {
     if (DUST_MODIFIERS.test(m.id) && (m.nightly.power ?? 0) < 0) solarDust = Math.max(solarDust, HALF_DUST.test(m.id) ? 0.5 : 1);
   }
+  const chosen: Record<string, string> = {};
+  for (const d of s.decisions) chosen[d.faultId] = d.optionId;
   let filter: WorkLook['filter'] = 'ok';
   for (const d of s.decisions) {
     if (d.faultId === 's2_filter' && d.optionId === 'replace') filter = 'new';
@@ -66,6 +85,26 @@ export function workLook(s: GameState, stationOf: (faultId: string) => string): 
   }
   if (s.faults.some((f) => FILTER_FAULTS.includes(f.faultId))) filter = 'clogged';
   const alarm: Record<string, boolean> = {};
-  for (const f of s.faults) alarm[stationOf(f.faultId)] = true;
-  return { solarDust, filter, alarm };
+  const age: Record<string, number> = {};
+  for (const f of s.faults) {
+    alarm[stationOf(f.faultId)] = true;
+    age[f.faultId] = Math.max(0, s.sol - f.firstSol);
+  }
+  const flags: Record<string, boolean> = {};
+  for (const [k, v] of Object.entries(s.flags)) if (v?.value) flags[k] = true;
+  const p = resourceStatus(s.res.power, s.config.rules);
+  return {
+    solarDust,
+    filter,
+    alarm,
+    chosen,
+    open: s.faults.map((f) => f.faultId),
+    age,
+    flags,
+    mods: s.modifiers.map((m) => m.id),
+    power: p === 'ok' ? 'on' : p === 'low' ? 'dim' : 'off',
+    charge: Math.max(0, Math.min(1, s.res.power / 100)),
+    sol: s.sol,
+    storm: !!s.flags[STORM_FLAG]?.value,
+  };
 }
