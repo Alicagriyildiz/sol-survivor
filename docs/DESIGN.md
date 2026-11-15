@@ -188,6 +188,7 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - (Oturum 5) 3D yürüyüş yalnızca görseldir; süresi mesai saatinden değil mesafeden gelir (en çok 1,5 sn). Mesai bedeli panelde ve görev satırında yazar.
 - (Oturum 5) Sahnenin tepki verdiği içerik kimlikleri (`storm`, `shelterReinforced`/`shelterWater`, adında "dust" geçen değiştiriciler, `s12_spe`) sunum katmanında, `src/scene/look.ts` içinde eşlenir; çekirdek bunları bilmez.
 - (Oturum 5) Gece geçişi yalnız 3D görünümde oynar; sade görünümde Günü bitir anında rapora geçer.
+- (Oturum 7) Ekran öneri vermez. Komutan: görev satırı yalnız açık sorunları ve istasyonlarını listeler (öneri düğmesi, bakım önerisi, 3D hedef oku, ipucu etiketi yok); sorunlar bitince sade "Günü bitir". Genç: görev satırı sıradaki sorunun yerini ve gün boyu en zayıf göstergeyi (ör. "En zayıf gösterge: Yaşam Desteği (28)") söyler; hangi seçeneği ya da bakım işini yapacağını söylemez. Ekranı harfiyen izleyen oyuncu `src/bots/follower.ts` ile ölçülür (tohum 1-200): Komutan %0, Genç %77,5 (hedef ≤%35 ve %60-85, `tests/commander.test.ts`).
 
 ## 8. Gerçek veri bağlantıları (Oturum 3)
 Ayrıntı ve kaynaklar: `docs/DATA.md` (İngilizce, jüri için). Kod: `src/content/data.ts` (saf), anlık görüntüler `src/data/`, indirme `scripts/fetch-data.mjs`.

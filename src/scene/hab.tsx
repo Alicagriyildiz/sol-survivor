@@ -19,8 +19,8 @@ const BUSY = new Set([45, 60, 75, 90, 105]);
 
 const lightLevel = (l: SceneLook['lights']) => powerGlow(l);
 /** Inside wall colour: a soft blue-grey, so the room is not a white box. */
-const WALL = 0xaeb6c8;
-const WALL_LOW = 0x5d6782;
+const WALL = 0x3a4560;
+const WALL_LOW = 0x232a3d;
 
 function Segment({ deg, rt }: { deg: number; rt: MutableRefObject<RT> }) {
   const a = (deg * Math.PI) / 180;
@@ -54,15 +54,18 @@ function Segment({ deg, rt }: { deg: number; rt: MutableRefObject<RT> }) {
       <RBox size={[SEG_W, WALL_H, 0.2]} position={[0, WALL_H / 2, 0]} color={WALL} />
       {/* Darker lower band and a teal accent line, so the room has structure. */}
       <RBox size={[SEG_W, 0.5, 0.06]} position={[0, 0.3, 0.12]} r={0.02} color={WALL_LOW} />
-      <mesh position={[0, 1.95, 0.105]} raycast={() => null}>
-        <planeGeometry args={[SEG_W, 0.05]} />
-        <meshStandardMaterial color={colorHex.accentDim} emissive={colorHex.accent} emissiveIntensity={0.25} />
+      {/* Outside face: light hull panel. Inside face (-z): the wall itself is dark navy, with
+          glowing teal light strips, so the interior reads as a lit spacecraft, not a white room. */}
+      <mesh position={[0, 1.5, 0.102]} raycast={() => null}>
+        <planeGeometry args={[SEG_W - 0.12, 2.5]} />
+        <meshStandardMaterial color={0xd3d8e2} roughness={0.7} />
       </mesh>
-      {/* Wall panel seams. */}
-      <mesh position={[0, 1.1, 0.102]} raycast={() => null}>
-        <planeGeometry args={[SEG_W - 0.3, 1.2]} />
-        <meshStandardMaterial color={0xa3abbe} roughness={0.85} />
-      </mesh>
+      {([[1.95, 0.07, colorHex.accent], [2.62, 0.04, 0x9fe8ee], [0.58, 0.035, colorHex.accent]] as const).map(([y, h, c]) => (
+        <mesh key={y} position={[0, y, -0.106]} rotation={[0, Math.PI, 0]} raycast={() => null}>
+          <planeGeometry args={[SEG_W, h]} />
+          <meshBasicMaterial color={c} toneMapped={false} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -169,12 +172,12 @@ function Floor() {
     <group>
       <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[HAB_R + 0.1, 48]} />
-        <meshStandardMaterial color={0x434c68} roughness={0.8} />
+        <meshStandardMaterial color={0x2b3246} roughness={0.55} metalness={0.15} />
       </mesh>
       {[1.7, 3.6].map((r) => (
         <mesh key={r} position={[0, 0.065, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
           <ringGeometry args={[r, r + 0.05, 64]} />
-          <meshBasicMaterial color={0x5a6688} />
+          <meshBasicMaterial color={0x3f8f9a} />
         </mesh>
       ))}
       <mesh position={[0, 0.07, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
@@ -215,7 +218,7 @@ export function Hab({ rt, look }: { rt: MutableRefObject<RT>; look: SceneLook })
       </mesh>
       <mesh position={[0, WALL_H + 0.01, 0]} scale={[1, 0.4, 1]}>
         <sphereGeometry args={[HAB_R - 0.05, 40, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={0x7d87a3} roughness={0.9} side={THREE.BackSide} />
+        <meshStandardMaterial color={0x262d42} roughness={0.9} side={THREE.BackSide} />
       </mesh>
       <mesh position={[0, WALL_H - 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[HAB_R - 0.4, HAB_R + 0.18, 48]} />

@@ -10,11 +10,12 @@ import { BlackBox } from './BlackBox';
 import type { Level } from './parts';
 import { Play, type LastAction, type TutorialStep } from './Play';
 import { DataScreen } from './DataViews';
+import { Ending } from './Ending';
 import { useLang } from './LangSwitch';
 import { Briefing, End, SolReport, Start } from './Screens';
 import { initialView, saveView, type View } from './view';
 
-type Screen = 'start' | 'briefing' | 'play' | 'report' | 'end' | 'blackbox' | 'data';
+type Screen = 'start' | 'briefing' | 'play' | 'report' | 'ending' | 'end' | 'blackbox' | 'data';
 
 interface Session {
   seed: number;
@@ -66,6 +67,7 @@ export function App() {
       tutorialOn,
     });
     setScreen('briefing');
+    return state;
   };
 
   /** Presentation shortcut: replay the recorded demo log up to a stop (docs/DEMO.md). */
@@ -73,7 +75,7 @@ export function App() {
     const { state, actions } = demoState(stop);
     current.current = state;
     setSession({ seed: DEMO_SEED, level: 'junior', state, actions, last: null, tutorial: null, tutorialOn: false });
-    setScreen(state.outcome ? 'end' : 'briefing');
+    setScreen(state.outcome ? 'ending' : 'briefing');
   };
 
   const act = (a: Action) => {
@@ -85,7 +87,7 @@ export function App() {
       setReportSol(session.state.sol);
       setScreen('report');
     } else if (next.outcome) {
-      setScreen('end');
+      setScreen('ending');
     }
   };
 
@@ -94,8 +96,9 @@ export function App() {
     const q = new URLSearchParams(window.location.search);
     const sol = Number(q.get('jump'));
     if (sol > 0) {
-      start(Number(q.get('seed')) || 1, 'junior', sol === 1, sol);
-      setScreen('play');
+      // jump past 15 (e.g. ?jump=99) lets the bot finish: opens the end-of-mission scene.
+      const st = start(Number(q.get('seed')) || 1, 'junior', sol === 1, sol);
+      setScreen(st.outcome ? 'ending' : 'play');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -124,7 +127,9 @@ export function App() {
         />
       );
     case 'report':
-      return <SolReport s={s} sol={reportSol} level={session.level} onNext={() => setScreen(s.outcome ? 'end' : 'briefing')} />;
+      return <SolReport s={s} sol={reportSol} level={session.level} onNext={() => setScreen(s.outcome ? 'ending' : 'briefing')} />;
+    case 'ending':
+      return <Ending s={s} view={view} onDone={() => setScreen('end')} />;
     case 'end':
       return (
         <End

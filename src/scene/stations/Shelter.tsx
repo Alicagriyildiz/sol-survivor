@@ -620,7 +620,21 @@ export default function Shelter({ rt, work, look }: StationProps) {
 
         {/* ---------------- the room ---------------- */}
         <mesh geometry={geo.wall} position={[0, H / 2, 0]} receiveShadow>
-          <meshStandardMaterial color={colorHex.grey} roughness={0.9} side={THREE.BackSide} />
+          <meshStandardMaterial color={0x4b4f60} roughness={0.95} side={THREE.BackSide} />
+        </mesh>
+        {/* Thick buried walls: heavy concrete-grey pillars all round and a low dark ceiling
+            beam ring, so the room reads as a narrow bunker, not a hab module. */}
+        {Array.from({ length: 12 }, (_, i) => {
+          const a = (i / 12) * Math.PI * 2 + 0.13;
+          return <RBox key={i} size={[0.34, H, 0.26]} r={0.04} position={[Math.cos(a) * (R - 0.12), H / 2, Math.sin(a) * (R - 0.12)]} rotation={[0, -a + Math.PI / 2, 0]} color={0x6b7084} />;
+        })}
+        <mesh position={[0, H - 0.18, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[R - 0.18, 0.16, 6, 30]} />
+          <meshStandardMaterial color={0x3a3f52} roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.5, 0]}>
+          <cylinderGeometry args={[R - 0.02, R - 0.02, 0.06, 30, 1, true]} />
+          <meshBasicMaterial color={colorHex.warn} side={THREE.BackSide} toneMapped={false} />
         </mesh>
         <mesh position={[0, H, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <circleGeometry args={[R + 0.05, 30]} />

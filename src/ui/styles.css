@@ -418,3 +418,71 @@ a { color: var(--c-accent); }
 .fp-label::after { content: ''; position: absolute; left: 50%; bottom: -7px; width: 2px; height: 6px; background: rgba(188, 197, 218, 0.7); }
 .fp-run { backdrop-filter: blur(3px); }
 .fp-run-title strong { letter-spacing: 0.01em; }
+
+/* ---------------------------------------------------------------- end-of-mission scene */
+.end-stage { position: fixed; inset: 0; z-index: 50; background: var(--c-bg-deep); display: flex; align-items: center; justify-content: center; overflow-y: auto; }
+.end-film { position: absolute; inset: 0; background: var(--c-night); }
+.end-film canvas { display: block; }
+.end-loading { background: radial-gradient(ellipse at 50% 60%, var(--c-surface) 0%, var(--c-bg-deep) 70%); }
+.end-skip { position: absolute; top: 16px; right: 16px; z-index: 5; background: rgba(21, 29, 54, 0.82); border-color: rgba(56, 208, 214, 0.6); }
+.end-caption {
+  position: absolute; left: 50%; bottom: 7vh; transform: translateX(-50%); z-index: 3; width: min(640px, calc(100% - 32px));
+  display: flex; flex-direction: column; gap: 0.3rem; text-align: center; padding: 0.8rem 1.1rem; border-radius: 14px;
+  background: rgba(21, 29, 54, 0.78); border: 1px solid rgba(188, 197, 218, 0.35); color: var(--c-text); backdrop-filter: blur(3px);
+}
+.end-caption strong { font-size: 1.35rem; color: var(--c-accent); }
+.end-win .end-caption strong { color: var(--c-ok); }
+.end-caption span { font-size: 1.1rem; animation: end-in 0.6s ease both; }
+.end-fade { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: var(--c-bg-deep); opacity: 0; animation: end-fadeout 0.7s ease forwards; }
+.end-hud {
+  position: absolute; top: 18%; left: 50%; transform: translateX(-50%); z-index: 3; padding: 0.5rem 1.2rem; border-radius: 8px;
+  font-weight: 700; letter-spacing: 0.08em; color: var(--c-warn); border: 2px solid var(--c-warn); background: rgba(11, 18, 40, 0.6);
+  animation: end-blink 0.9s steps(2, start) infinite;
+}
+.end-visor {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(ellipse 110% 100% at 50% 48%, transparent 58%, rgba(12, 18, 36, 0.45) 78%, rgba(12, 18, 36, 0.9) 100%);
+}
+.end-alarm { position: absolute; inset: 0; z-index: 2; pointer-events: none; box-shadow: inset 0 0 90px 30px rgba(226, 69, 127, 0.55); animation: end-pulse 0.9s ease-in-out infinite alternate; }
+.end-alarm span {
+  position: absolute; top: 18%; left: 50%; transform: translateX(-50%); padding: 0.5rem 1.2rem; border-radius: 8px; white-space: nowrap;
+  font-weight: 700; letter-spacing: 0.06em; color: var(--c-text); background: rgba(226, 69, 127, 0.75); border: 2px solid var(--c-danger);
+}
+.end-invite { margin: 0 0 0.6rem; font-weight: 600; color: var(--c-accent); }
+
+/* Card version (simple view, no WebGL, reduced motion). */
+.end-card { max-width: 560px; width: 100%; margin: auto; }
+.end-card .card { display: flex; flex-direction: column; gap: 0.6rem; align-items: stretch; text-align: center; }
+.end-card h1 { margin: 0.3rem 0 0; }
+.end-pic { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--c-border); }
+.end-card-warn { margin: 0; font-weight: 700; letter-spacing: 0.05em; color: var(--c-warn); }
+.end-card.end-life .end-card-warn { color: var(--c-danger); }
+.end-line { margin: 0; animation: end-in 0.6s ease both; }
+.end-craft { animation-duration: 5s; animation-timing-function: ease-in-out; animation-fill-mode: both; }
+.end-land { animation-name: end-land; }
+.end-lift { animation-name: end-lift; }
+.end-flame { animation: end-flicker 0.15s linear infinite alternate; }
+.end-dust { opacity: 0; animation: end-dust 5s ease both; }
+.end-blink { animation: end-blink 0.8s steps(2, start) infinite; }
+.end-pulse { animation: end-pulse 0.9s ease-in-out infinite alternate; }
+.end-off { transition: fill 0.5s; }
+
+@keyframes end-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes end-fadeout { to { opacity: 1; } }
+@keyframes end-blink { to { visibility: hidden; } }
+@keyframes end-pulse { from { opacity: 0.55; } to { opacity: 1; } }
+@keyframes end-flicker { from { opacity: 0.45; } to { opacity: 0.9; } }
+@keyframes end-land { 0% { transform: translateY(-110px); } 45%, 65% { transform: translateY(0); } 100% { transform: translateY(-140px); } }
+@keyframes end-lift { 0%, 40% { transform: translateY(0); } 100% { transform: translateY(-140px); } }
+@keyframes end-dust { 0% { opacity: 0; } 35%, 70% { opacity: 0.8; } 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .end-craft, .end-flame, .end-dust, .end-blink, .end-pulse, .end-line, .end-caption span, .end-hud, .end-alarm { animation: none !important; }
+  .end-dust { opacity: 0.6; }
+}
+.end-card.still .end-craft, .end-card.still .end-line { animation: none; }
+@media (max-width: 600px) {
+  .end-caption { bottom: 4vh; }
+  .end-caption strong { font-size: 1.15rem; }
+  .end-caption span { font-size: 1rem; }
+}

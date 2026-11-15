@@ -14,7 +14,7 @@ import { fmtHours } from '../ui/parts';
 import type { SceneLook, WorkLook } from './look';
 import { softDot, ease, now, reduceMotion, type Phase, type RT, type SceneRun, type StationProps } from './core';
 import * as sfx from './sound';
-import { DustWall, Dust, Ground, Hills, Lights, Rocks, Sky, type Quality } from './env';
+import { DustWall, Dust, Ground, Hills, Lights, Outpost, PathLights, Rocks, Sky, type Quality } from './env';
 import { Hab, Roof, Yard } from './hab';
 import { Hand } from './hand';
 import Hub from './stations/Hub';
@@ -671,6 +671,8 @@ export default function FirstPerson(props: FirstPersonProps) {
           </group>
           <Roof />
           <Yard />
+          <Outpost />
+          <PathLights />
           <group {...hit('battery')}>
             <Battery {...sp} />
           </group>

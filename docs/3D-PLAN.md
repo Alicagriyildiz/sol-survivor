@@ -20,11 +20,12 @@
 | `world.ts` | Saf yerleşim: istasyon noktaları (durma, bakış, yakın iş pozu, etiket), yol grafiği, yürüme süresi, arazi yüksekliği, işe özel kamera pozları (`FAULT_WORK`). Testli (`tests/world.test.ts`). |
 | `look.ts` | `sceneLook` (ışık, fırtına, gece, Sol 12) ve `workLook` (son seçimler, açık arızalar ve yaşları, bayraklar, değiştiriciler, güç). |
 | `core.tsx` | Kare başına ortak durum (`RT`), çalışan iş (`stationAct`, `shownWork`), pahlı kutu, durum lambası, kapı, Kenney model yükleyici (yedek şekilli), parçacık çeşmesi. |
-| `env.tsx` | Gökyüzü (gündüz pembe-mor, gece yıldızlı, fırtına bulanık, Sol 12 mor perdeler), güneş + dolgu ışığı + gölge + ACES ton eşleme, engebeli ve renkli zemin, araç izleri, uzak tepe silueti, kayalar, uçuşan toz, fırtına toz duvarı. |
+| `env.tsx` | Dış yerleşim (`Outpost`: hangarlar, gezici, kule, büyük çanak), yol ışıkları (`PathLights`), gökyüzü (gündüz pembe-mor, gece yıldızlı, fırtına bulanık, Sol 12 mor perdeler), güneş + dolgu ışığı + gölge + ACES ton eşleme, engebeli ve renkli zemin, araç izleri, uzak tepe silueti, kayalar, uçuşan toz, fırtına toz duvarı. |
 | `hab.tsx` | Yuvarlak üs: duvar parçaları, kapılar, pencereler, tavan ışıkları (güçle kararır), borular, masa, dolaplar, zemin çizgileri; çatıda dönen çanak; dış avlu. |
 | `hand.tsx` | Eldiven ve işe göre alet (fırça, bant, anahtar/kartuş, kürek, fiş, tablet; şalterde açık el). |
 | `sound.ts` | Tarayıcıda üretilen kısa sesler (dosya yok), varsayılan kısık, kapatılabilir. |
 | `stations/*.tsx` | İstasyon başına iş noktası ve işler: `Hub`, `Solar`, `Battery`, `Greenhouse`, `Shelter`, `Airlock`, `Landing`. |
+| `Ending.tsx` | Görev sonu filmi (kazanma: iniş + kalkış; kaybetme: nedene göre + acil kapsül). Kart sürümü `src/ui/Ending.tsx`. |
 | `FirstPerson.tsx` | Kamera ve yürüyüş, iş sürücüsü (yaklaş → yap → bitir), etiketler, yön oku, iş kutusu, alt çubuk. |
 
 ## Kalan işler / fikirler

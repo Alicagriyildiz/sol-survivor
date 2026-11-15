@@ -17,6 +17,7 @@ import {
   type RoutineView,
 } from '../sim/selectors';
 import type { Action, GameState, Invalid, ResourceId } from '../sim/types';
+import { weakGauge } from '../bots/follower';
 import { DeltaList, fmtDate, fmtHours, Inventory, TopBar, Warnings, type Level } from './parts';
 import { stationInfo, type StationInfo } from './stationInfo';
 import { markSceneBroken, SceneBoundary, sceneBroken, webglAvailable, type View } from './view';
@@ -270,7 +271,7 @@ function StationPanel({
             {elsewhere.length > 0 ? (
               <div className="row wrap">
                 {elsewhere.map((x) => (
-                  <button key={x} className="btn small primary" onClick={() => open(x)}>
+                  <button key={x} className={`btn small ${level === 'junior' ? 'primary' : ''}`} onClick={() => open(x)}>
                     ⚠ {tr.stations[x]!.name} →
                   </button>
                 ))}
@@ -340,31 +341,20 @@ function HoursLog({ s }: { s: GameState }) {
   );
 }
 
-/** Maintenance job that helps the weakest of Power / Life Support / Shield (null: none possible). */
-function maintenanceFor(s: GameState): { station: string; hours: number } | null {
-  const helps: Record<string, string> = { power: 'tune', life: 'tend', shield: 'bags' };
-  const order = (['power', 'life', 'shield'] as const).slice().sort((a, b) => s.res[a] - s.res[b]);
-  const ok = (rid: string) => engine.content.routines.some((r) => r.id === rid) && !engine.check(s, { type: 'routine', routineId: rid });
-  for (const r of order) {
-    const rid = helps[r]!;
-    if (ok(rid)) {
-      const v = routineView(engine, s, rid);
-      return { station: engine.routine(rid).station, hours: v.cost.total };
-    }
-  }
-  const any = engine.content.routines.find((r) => ok(r.id));
-  return any ? { station: any.station, hours: routineView(engine, s, any.id).cost.total } : null;
-}
-
-/** One task line: what to do and where (place and walking cost, never which option). */
+/** Task line. Junior: where the next open fault is (place and walking cost, never which
+ *  option) and, all day, which gauge is weakest (never which job). Commander: no
+ *  suggestions at all, only the open faults and their stations (each opens its station),
+ *  then a plain "End the day". tests/commander.test.ts measures players who obey it. */
 function MissionBar({
   s,
+  level,
   info,
   open,
   endDay,
   coach,
 }: {
   s: GameState;
+  level: Level;
   info: StationInfo[];
   open: (station: string) => void;
   endDay: () => void;
@@ -372,10 +362,13 @@ function MissionBar({
 }) {
   const m = mission(engine, s);
   const faults = todayFaults(engine, s);
+  const commander = level === 'commander';
   let text: ReactNode = null;
   let button: ReactNode = null;
   let main: string | null = null;
-  if (m.kind === 'fault') {
+  if (m.kind === 'fault' && commander) {
+    text = tr.ui.missionOpen;
+  } else if (m.kind === 'fault') {
     main = m.faultId;
     const fault = faultTitle(m.faultId);
     const station = tr.stations[m.station]!;
@@ -402,26 +395,19 @@ function MissionBar({
       </button>
     );
   } else if (m.kind === 'done') {
-    // Spare hours: point at the maintenance job for the weakest gauge (measured: obeying a
-    // bare "End sol" here cost players ~28 win points). End sol stays as a second button.
-    const maint = m.canWork ? maintenanceFor(s) : null;
-    text = maint ? fmt(tr.ui.missionMaint, { station: tr.stations[maint.station]!.name, h: fmtHours(maint.hours) }) : m.canWork ? tr.ui.missionDone : tr.ui.missionDoneTired;
-    button = maint ? (
-      <>
-        <button className="btn primary" onClick={() => open(maint.station)}>
-          🔧 {tr.stations[maint.station]!.name} →
-        </button>
-        <button className="btn" onClick={endDay}>
-          🌙 {tr.ui.endSol}
-        </button>
-      </>
-    ) : (
+    // No job is suggested on either level: the player picks what to do with spare hours.
+    text = !m.canWork ? tr.ui.missionDoneTired : commander ? tr.ui.missionClear : tr.ui.missionDone;
+    button = (
       <button className={`btn primary big ${m.canWork ? '' : 'pulse'}`} onClick={endDay}>
         🌙 {tr.ui.endSol}
       </button>
     );
   }
-  const chips = faults.filter((f) => f.faultId !== main);
+  // Junior only: name the weakest gauge (same function the follower bot reads).
+  const weak = !commander && m.kind !== 'ended' ? weakGauge(s) : null;
+  // Commander lists open faults first, in the order they came in; Junior keeps today's order.
+  const listed = commander ? [...faults.filter((f) => f.status === 'open'), ...faults.filter((f) => f.status !== 'open')] : faults;
+  const chips = listed.filter((f) => f.faultId !== main);
   return (
     <section className={`mission ${coach ? 'coach-target' : ''}`} aria-live="polite">
       <div className="mission-line">
@@ -430,6 +416,11 @@ function MissionBar({
         </span>
         <span className="sr-only">{tr.ui.mission}: </span>
         <span className="mission-text">{text}</span>
+        {weak && (
+          <span className="chip-cost" role="note">
+            📉 {fmt(tr.ui.missionWeak, { res: tr.res[weak.res], v: String(Math.round(weak.value)) })}
+          </span>
+        )}
         {button}
         <HoursLog s={s} />
       </div>
@@ -441,6 +432,7 @@ function MissionBar({
               <li key={f.faultId}>
                 <button className={`chip st-${f.status}`} onClick={() => open(f.station)} title={`${tr.stations[f.station]!.name} · ${word}`}>
                   <span aria-hidden>{f.status === 'open' ? '⚠' : f.status === 'solved' ? '✓' : '⏳'}</span> {faultTitle(f.faultId)}
+                  {commander && <span className="dim"> · 📍 {tr.stations[f.station]!.name}</span>}
                   <span className="sr-only"> · {word}</span>
                 </button>
               </li>
@@ -703,7 +695,7 @@ export function Play({
       />
       <Warnings s={s} />
       <div className="play-top">
-        <MissionBar s={s} info={info} open={openStation} endDay={endDay} coach={step === 'done' ? bubble() : null} />
+        <MissionBar s={s} level={level} info={info} open={openStation} endDay={endDay} coach={step === 'done' ? bubble() : null} />
         {last && !run && <LastActionLine last={last} onClose={clearLast} />}
       </div>
       <main className="play-main">
@@ -723,7 +715,7 @@ export function Play({
                 look={sceneLook(s, night)}
                 work={workLook(s, stationOf)}
                 run={sceneRun}
-                target={m.kind === 'fault' && m.fixable ? m.station : null}
+                target={level === 'junior' && m.kind === 'fault' && m.fixable ? m.station : null}
                 onPick={openStation}
                 onArrive={(id) => {
                   setViewAt(id);

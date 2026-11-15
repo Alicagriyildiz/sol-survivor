@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { alternatives, counterfactual, replay, replayLenient, type MissionLog } from '../src/blackbox';
 import { BOTS, playGame, type BotName } from '../src/bots/bots';
+import { followerFor } from '../src/bots/follower';
 import { runBatch, seedRange, type BatchStats } from '../src/bots/stats';
 import { DEFAULT_CONFIG, engine } from '../src/content';
 import { COMMANDER_CONFIG, configFor } from '../src/content/config';
@@ -21,7 +22,13 @@ const regolith = runBatch(
   COMMANDER_CONFIG,
 );
 
+// Players who do exactly what the screen points at (src/bots/follower.ts). Commander shows
+// no suggestions; Junior names the next fault's place and the weakest gauge.
+const follower = runBatch(engine, followerFor('commander'), SEEDS, COMMANDER_CONFIG);
+const juniorFollower = runBatch(engine, followerFor('junior'), SEEDS, DEFAULT_CONFIG);
+
 const pct = (x: number) => Math.round(x * 1000) / 10;
+console.log(`[commander] follower win ${pct(follower.winRate)}% | junior follower win ${pct(juniorFollower.winRate)}%`);
 console.log(`[commander] careful + sol 6 regolith forced: win ${pct(regolith.winRate)}%`);
 for (const [name, st] of Object.entries(stats)) {
   const l = st.games - st.wins || 1;
@@ -41,9 +48,12 @@ describe('commander config', () => {
 });
 
 describe('commander balance (200 seeds)', () => {
-  it('careful bot wins 40-60%', () => {
-    expect(stats.careful.winRate).toBeGreaterThanOrEqual(0.4);
-    expect(stats.careful.winRate).toBeLessThanOrEqual(0.6);
+  it('careful bot wins 35-55%', () => {
+    expect(stats.careful.winRate).toBeGreaterThanOrEqual(0.35);
+    expect(stats.careful.winRate).toBeLessThanOrEqual(0.55);
+  });
+  it('following the screen is no win button (follower <= 35%)', () => {
+    expect(follower.winRate).toBeLessThanOrEqual(0.35);
   });
   it('random bot wins under 8%', () => {
     expect(stats.random.winRate).toBeLessThan(0.08);
@@ -52,11 +62,19 @@ describe('commander balance (200 seeds)', () => {
     expect(stats.idle.winRate).toBe(0);
   });
   it('no bot ever loses on sol 1', () => {
-    for (const st of Object.values(stats)) expect(st.lossSols[1] ?? 0).toBe(0);
+    for (const st of [...Object.values(stats), follower]) expect(st.lossSols[1] ?? 0).toBe(0);
   });
   it('reinforcing the sol 6 shelter helps but is no win button (careful + regolith <= 85%)', () => {
     expect(regolith.winRate).toBeGreaterThan(stats.careful.winRate);
     expect(regolith.winRate).toBeLessThanOrEqual(0.85);
+  });
+});
+
+describe('junior screen follower (200 seeds)', () => {
+  it('obeying the junior hints mostly wins, but not always (60-85%)', () => {
+    expect(juniorFollower.winRate).toBeGreaterThanOrEqual(0.6);
+    expect(juniorFollower.winRate).toBeLessThanOrEqual(0.85);
+    expect(juniorFollower.lossSols[1] ?? 0).toBe(0);
   });
 });
 

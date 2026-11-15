@@ -307,6 +307,7 @@ export function End({
       )}
       {/* The Black Box is the main next step: first, big, with one line saying what it does. */}
       <div className="card end-next">
+        <p className="end-invite">🔍 {o.won ? tr.ending.inviteWon : tr.ending.invite}</p>
         <button className="btn primary big" onClick={onBlackBox} autoFocus>
           ⬛ {tr.ui.openBlackBox} →
         </button>

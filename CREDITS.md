@@ -7,7 +7,7 @@ License: Creative Commons Zero (CC0 1.0), https://creativecommons.org/publicdoma
 (verified from `License.txt` inside the downloaded pack; a copy is kept at `public/models/kenney/License.txt`).
 Crediting is not required; we credit Kenney gladly.
 
-Only the models the game uses are in the repo (`public/models/kenney/*.glb`, 20 files, about 280 kB in total).
+Only the models the game uses are in the repo (`public/models/kenney/*.glb`, 26 files, about 380 kB in total).
 Their materials are recoloured at load time to the game palette (`src/scene/core.tsx`, `MATERIAL_COLORS`).
 
 | Model | Used for |

@@ -1,5 +1,36 @@
 # İlerleme
 
+## Oturum 7 — 2026-11-15 (sunumdan önce, 13:40-14:40) — görsel fark, görev sonu sahneleri, zor Komutan
+
+**Görsel fark.** Prototip (e2c8c4e), canlı sürüm (8656dc2) ve yeni sürüm aynı açılardan çekildi. Prototip ile
+canlı sürüm arasında fark gerçekten küçüktü: aynı soluk pembe gökyüzü ve tek tepe halkası, düz ışık, beyaz iç
+mekân; Kenney modelleri tek soluk tona boyanmıştı ve uzakta duruyordu. Değişenler:
+- Gökyüzü üç duraklı (gül rengi ufuk, lila orta, koyu mavi-mor tepe), net güneş diski + mavi hale; güneş alçak.
+- Üç katmanlı tepeler (uzak mavi-mor, orta gül, yakın koyu), sis uzağa alındı.
+- Güçlü sıcak güneş (3.4) + soğuk mavi gök/dolgu ışığı; daha keskin gölgeler.
+- Kenney malzemeleri parça parça: açık gövde, lacivert çerçeve, koyu pencere, hafif parlayan turkuaz şerit;
+  kayalar bazalt tonlarında. Yeni modeller göz hizasında: EVA yolunun üstünde iki kule (kapı gibi), yollar arasında
+  gezici, üssün yanında büyük hangar (sarı şeritli), yuvarlak hangar, küçük hangar, iniş yolunda büyük çanak.
+- Yol işaretleri: EVA izleri boyunca parlayan turkuaz/sarı başlıklı direkler, iniş alanında ışık halkası.
+- Zeminde büyük bazalt lekeleri ve açık toz alanları.
+- Üs içi: koyu lacivert duvarlar, parlayan turkuaz ışık şeritleri, koyu tavan; dışı açık panel.
+- Sera: canlı mor yetiştirme ışığı ve yeşil bitkiler. Sığınak: kalın beton sütunlar, alçak kiriş halkası, sarı şerit.
+- Önce/sonra: `docs/screenshots/once-*.png` ↔ `sonra-*.png` (1 ana üs, 2 paneller, 3 üs dışı, 4 sera, 5 sığınak).
+
+**Görev sonu sahneleri** (`src/scene/Ending.tsx`, `src/ui/Ending.tsx`; yan ajan). Kazanma: ikmal aracı iner, kamera
+yürür, araçla yükselir, üs aşağıda küçülür. Kaybetme nedene göre (güç: üs kararır; yaşam desteği: alarm ışığı;
+Kalkan/radyasyon: kask uyarısı), sonra acil durum kapsülü kalkar; ölüm yok. Atlanabilir (Esc/Enter), 14 sn zaman
+aşımı, sade görünümde SVG kart, azaltılmış harekette durağan kart. Görev sonu ekranında Kara Kutu daveti.
+Geliştirme: `?jump=99&seed=2` (kazanma), `seed=1` (güç), `seed=7` (Kalkan), `&ending=life` zorlar.
+
+**Komutan** (yan ajan). Komutan'da öneri yok: görev satırı yalnız açık sorunları ve yerlerini listeler, 3D ok yok,
+bakım düğmesi yok. Genç'te yalnız "En zayıf gösterge: X (n)" notu. Yeni bot `src/bots/follower.ts` (ekranı harfiyen
+izleyen): Komutan %0, Genç %77.5 (1-200 ve 201-400). Dikkatli Komutan %44 / %46.5, rastgele %2.5 / %0, boş %0;
+Sol 1 kaybı yok. COMMANDER_CONFIG değişmedi (57/61).
+
+**Doğrulanmadı:** gerçek GPU / telefon akıcılığı (ışık şiddeti ve modeller arttı, gölge haritası aynı; yeni 6 model,
+~70 instanced direk). Bitiş sahnesinde kalkışta ön planda bulanık varil görünebiliyor.
+
 ## Oturum 6 — 2026-11-15 (sunum günü) — birinci şahıs 3D, işin canlı yapılması, İngilizce, Komutan
 
 Çekirdek, içerik sayıları, veri ve Kara Kutu mantığı değişmedi (yalnız `config.ts`'e Komutan görev ayarı eklendi).

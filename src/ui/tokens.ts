@@ -29,8 +29,8 @@ export const colors = {
   original: '#bcc5da',
   alt: '#38d0d6',
   // First-person world (session 6). Pale pink-violet Mars sky, never orange.
-  skyTop: '#a995b4',
-  skyHorizon: '#d9bfb8',
+  skyTop: '#55639e',
+  skyHorizon: '#e6c3bb',
   skyStormTop: '#a8918f',
   skyStormHorizon: '#bfa49e',
   skyEventTop: '#8f6fa4',

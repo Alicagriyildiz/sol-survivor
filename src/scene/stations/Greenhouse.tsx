@@ -49,7 +49,8 @@ const PATCH_FROM = new THREE.Vector3(-13.5, 1.15, -0.5);
 const DOOR_X = GX + GREENHOUSE_R - 0.25;
 const DOOR_EYE = new THREE.Vector3(DOOR_X, EYE, 0);
 
-const LIGHT = 0xd8c6ff;
+/** Grow light: a vivid violet (red + blue LEDs), clearly different from every other room. */
+const LIGHT = 0xa64dff;
 
 // ------------------------------------------------------------------ what the state says
 
@@ -161,7 +162,7 @@ export default function GreenhouseStation({ rt, work }: StationProps) {
       col: new THREE.Color(),
       cDead: new THREE.Color(colorHex.marsBrown).lerp(new THREE.Color(colorHex.grey), 0.45),
       cPale: new THREE.Color(colorHex.plant).lerp(new THREE.Color(colorHex.grey), 0.6),
-      cGood: new THREE.Color(colorHex.plant),
+      cGood: new THREE.Color(0x3fc46a),
       cDry: new THREE.Color(colorHex.marsBrown),
       cWet: new THREE.Color(colorHex.marsBrown).lerp(new THREE.Color(colorHex.bgDeep), 0.5),
       cTray: new THREE.Color(colorHex.hullDark),
@@ -370,8 +371,8 @@ export default function GreenhouseStation({ rt, work }: StationProps) {
     if (isO2) level *= 1 + 0.7 * Math.sin(p * Math.PI);
     if (s.level < 0) s.level = level;
     s.level += (level - s.level) * (doing ? 1 : 1 - Math.exp(-dt * 3));
-    if (light.current) light.current.intensity = 1.5 + 13 * s.level;
-    if (stripMat.current) stripMat.current.emissiveIntensity = 0.05 + 1.6 * s.level;
+    if (light.current) light.current.intensity = 3 + 38 * s.level;
+    if (stripMat.current) stripMat.current.emissiveIntensity = 0.05 + 2.6 * s.level;
     s.bubbleRate = isO2 && p > 0.15 ? 1.2 : 0;
 
     // ---- console: alarm blink, oxygen bar; sealing lever
@@ -451,7 +452,7 @@ export default function GreenhouseStation({ rt, work }: StationProps) {
 
   const inner = -HAB_R;
   const outer = GX + GREENHOUSE_R - 0.2;
-  const leafMat = (ref: typeof workLeafMat) => <meshStandardMaterial ref={ref} color={colorHex.plant} emissive={colorHex.plant} emissiveIntensity={0.08} roughness={0.8} flatShading />;
+  const leafMat = (ref: typeof workLeafMat) => <meshStandardMaterial ref={ref} color={0x3fc46a} emissive={0x2f9a52} emissiveIntensity={0.3} roughness={0.8} flatShading />;
 
   return (
     <group>
@@ -571,11 +572,11 @@ export default function GreenhouseStation({ rt, work }: StationProps) {
 
       {/* ---------------- grow lights */}
       <mesh position={[WB_X, 1.95, WB_Z]} geometry={rbox(0.22, 0.05, 1.5, 0.02)}>
-        <meshStandardMaterial ref={stripMat} color={colorHex.hull} emissive={LIGHT} emissiveIntensity={1.4} />
+        <meshStandardMaterial ref={stripMat} color={LIGHT} emissive={LIGHT} emissiveIntensity={2.4} />
       </mesh>
       {SIDE_Z.map((z) => (
         <mesh key={z} position={[SIDE_X, 2.05, z]} geometry={rbox(2.4, 0.05, 0.22, 0.02)}>
-          <meshStandardMaterial color={colorHex.hull} emissive={LIGHT} emissiveIntensity={1.2} />
+          <meshStandardMaterial color={LIGHT} emissive={LIGHT} emissiveIntensity={2.2} />
         </mesh>
       ))}
       <pointLight ref={light} position={[-13.6, 2.7, -0.3]} intensity={14} distance={9} color={LIGHT} />

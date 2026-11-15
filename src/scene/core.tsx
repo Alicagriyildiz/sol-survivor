@@ -238,15 +238,24 @@ export const seg = (p: number, a: number, b: number) => ease((p - a) / (b - a));
 const MODEL_BASE = `${import.meta.env.BASE_URL}models/kenney/`;
 
 /** Kenney material names -> our palette (no orange/amber anywhere). */
+/*  Each Kenney part keeps its own role so the models read as built things, not grey blobs:
+ *  light hull, charcoal-navy frames, near-black windows, teal trim (slightly glowing), and the
+ *  rock materials in darker basalt tones than the ground. */
 const MATERIAL_COLORS: Record<string, number> = {
-  metal: colorHex.hull,
-  metalDark: colorHex.hullDark,
-  metalRed: colorHex.accentDim,
-  dark: 0x3a4157,
+  metal: 0xe9ecf3,
+  metalDark: 0x485169,
+  metalRed: colorHex.accent,
+  dark: 0x161b2a,
   _defaultMat: 0xcfe8ee,
-  rock: colorHex.marsRose,
+  rock: 0x7a5755,
   rockTrack: colorHex.marsDust,
-  rockDark: colorHex.marsBrown,
+  rockDark: 0x4d3a3c,
+};
+const MATERIAL_LOOK: Record<string, { metalness: number; roughness: number; emissive?: number }> = {
+  metal: { metalness: 0.12, roughness: 0.5 },
+  metalDark: { metalness: 0.2, roughness: 0.45 },
+  metalRed: { metalness: 0.2, roughness: 0.5, emissive: 0.18 },
+  dark: { metalness: 0.3, roughness: 0.2 },
 };
 
 export type ModelName =
@@ -269,7 +278,13 @@ export type ModelName =
   | 'pipe_ring'
   | 'chimney_detailed'
   | 'supports_low'
-  | 'craft_cargoA';
+  | 'craft_cargoA'
+  | 'rover'
+  | 'hangar_roundA'
+  | 'hangar_smallA'
+  | 'hangar_largeA'
+  | 'satelliteDish_large'
+  | 'structure_detailed';
 
 function ModelInner({ name, tint, shadows }: { name: ModelName; tint?: Partial<Record<string, number>>; shadows: boolean }) {
   const gltf = useLoader(GLTFLoader, `${MODEL_BASE}${name}.glb`);
@@ -281,9 +296,14 @@ function ModelInner({ name, tint, shadows }: { name: ModelName; tint?: Partial<R
       m.castShadow = shadows;
       m.receiveShadow = true;
       const src = m.material as THREE.MeshStandardMaterial;
-      const mat = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.15, flatShading: true });
+      const lk = MATERIAL_LOOK[src.name];
+      const mat = new THREE.MeshStandardMaterial({ roughness: lk?.roughness ?? 0.8, metalness: lk?.metalness ?? 0.05, flatShading: true });
       const col = tint?.[src.name] ?? MATERIAL_COLORS[src.name] ?? 0xcfd3dc;
       mat.color.setHex(col);
+      if (lk?.emissive) {
+        mat.emissive.setHex(col);
+        mat.emissiveIntensity = lk.emissive;
+      }
       m.material = mat;
     });
     return o;

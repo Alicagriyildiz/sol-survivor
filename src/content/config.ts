@@ -39,7 +39,12 @@ export type Level = 'junior' | 'commander';
  *  Bot numbers (seeds 1-200, tests/commander.test.ts): careful 44%, random 2.5%, idle 0%,
  *  no loss on sol 1. Chosen over 60 / 60 (careful 46%) because there reinforcing the sol 6
  *  shelter alone lifted the careful bot to 95.5%; here it gives 67%, and the careful bot's
- *  losses are split between Power, Life and Shield instead of ~85% Shield. */
+ *  losses are split between Power, Life and Shield instead of ~85% Shield.
+ *  Session 7: the Commander screen gives no suggestions (no suggested station or job, no
+ *  target arrow, no hint tags); the task line only lists open faults and their stations.
+ *  A player who does exactly what the screen shows (src/bots/follower.ts: faults in listed
+ *  order, first card, then end the sol) wins 0% here; careful 44% (target <= 35% / 35-55%),
+ *  so these numbers were kept. */
 export const COMMANDER_CONFIG: MissionConfig = {
   ...DEFAULT_CONFIG,
   start: { ...DEFAULT_CONFIG.start, power: 57, life: 61 },
