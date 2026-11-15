@@ -20,7 +20,16 @@ export type Cond =
   | { solLt: number }
   | { solGte: number }
   | { all: Cond[] }
-  | { any: Cond[] };
+  | { any: Cond[] }
+  | { not: Cond };
+
+/** A short sentence (text id) shown to the player when `when` holds. The core never reads
+ *  notes; presentation layers evaluate them to make decision chains visible
+ *  ("You reinforced the shelter on sol 6, so..."). */
+export interface ChainNote {
+  when: Cond;
+  id: string;
+}
 
 export type Effect =
   | { kind: 'res'; res: ResourceId; amount: Amount }
@@ -64,6 +73,8 @@ export interface OptionDef {
   effects: Effect[];
   /** Machine-readable hint tags mirroring the player-facing "why" text. */
   tags?: OptionTag[];
+  /** Chain notes shown on the option card (and after choosing it). */
+  notes?: ChainNote[];
 }
 
 /** invest: pays off later. laterCost: cheap now, costs later. */
@@ -82,6 +93,8 @@ export interface SolDef {
   morning?: Effect[];
   night?: Effect[];
   faults: FaultDef[];
+  /** Chain notes evaluated at the sol's morning (shown in the briefing). */
+  notes?: ChainNote[];
 }
 
 export interface StationDef {

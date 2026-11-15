@@ -83,6 +83,12 @@ describe('content', () => {
         });
       }
     }
+    for (const sol of SCENARIO.sols) {
+      for (const n of sol.notes ?? []) expect(tr.chain[n.id], `sol ${sol.sol} note ${n.id}`).toBeTruthy();
+      for (const f of sol.faults) for (const o of f.options) for (const n of o.notes ?? []) expect(tr.chain[n.id], `${f.id}/${o.id} note ${n.id}`).toBeTruthy();
+      if (sol.morning) expect(tr.events[`sol${sol.sol}.morning`], `event sol${sol.sol}.morning`).toBeTruthy();
+      if (sol.night) expect(tr.events[`sol${sol.sol}.night`], `event sol${sol.sol}.night`).toBeTruthy();
+    }
     for (let sol = 1; sol <= 15; sol++) {
       expect(tr.sols[sol]?.title).toBeTruthy();
       expect(tr.sols[sol]?.weather).toBeTruthy();

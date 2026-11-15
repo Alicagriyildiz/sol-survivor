@@ -110,6 +110,7 @@ export function createEngine(content: ContentPack): Engine {
     if ('item' in c) return (s.items[c.item] ?? 0) >= c.gte;
     if ('solLt' in c) return s.sol < c.solLt;
     if ('solGte' in c) return s.sol >= c.solGte;
+    if ('not' in c) return !evalCondC(s, c.not, causes);
     if ('all' in c) {
       let ok = true;
       for (const x of c.all) ok = evalCondC(s, x, causes) && ok;

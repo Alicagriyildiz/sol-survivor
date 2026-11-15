@@ -77,7 +77,7 @@ Tüm rastgelelik `init` anında, tohumdan (mulberry32) çekilen **zarlarla** yap
 | 11 | Fırtına sonrası paneller | EVA fırçala / yarısını temizle / rüzgarı bekle (kumar: `windCleans` zarı ya da `panelsTilted` → ertesi sabah temizlenir). |
 | 12 | Güneş parçacık olayı (Curiosity RAD, Eylül 2017) | Sığınakta kal 6 sa / kısa kal 3 sa / su bidonlu köşe / çalışmaya devam. Alınan radyasyon `shelterReinforced` > `shelterWater` > hiçbiri. |
 | 13 | Mikro sızıntı (ISS 2020 çay yaprakları; Soyuz 2018) — varyant: hava kilidi/sera, 3 boy | Yama kiti / çay yaprağı + bant / bölmeyi kapat / ertele (yeniden açılır). İniş alanı (yeni açıldı): kayaları temizle EVA (`padClear`) / işaret koy (`padMarked`) / ertele. |
-| 14 | Soğutma arızası (ISS amonyak pompaları) — varyant: pompa/radyatör | Değiştir/temizle / su ünitesinin pompasını ödünç al (sadece `recyclerServiced`) / bataryaların yarısını kapat / ertele. Sabah: su ünitesi bakımsızsa ek Yaşam kaybı. |
+| 14 | Soğutma arızası (ISS amonyak pompaları) — varyant: pompa/radyatör | Değiştir/temizle / su ünitesinin pompasını ödünç al (sadece `recyclerServiced`) / bataryaların yarısını kapat / ertele. Sabah: su ünitesi bakımsızsa ek Yaşam kaybı. "Pompayı ödünç al" ve "yarısını kapat" her iki varyantta da içeride, Batarya istasyonunda yapılır (radyatör varyantında da EVA gerekmez). |
 | 15 | İkmal inişi | Fener tam güç (`beaconReserve` varsa ucuz) / kısık fener (`sentReport` ya da `padClear` varsa yakına iner) / EVA ile yansıtıcı / feneri yakma (çok uzağa iner). |
 
 **Zorunlu zincirler** (hepsi kurulu):
@@ -118,6 +118,17 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - 5 rutin varken (dinlen, EVA ile fırçala dahil) rastgele botun bakım işlerinin çoğu boşa gidiyordu; rutinler kaynak başına bire indirildi.
 - Rastgele bot ile dikkatli bot arasındaki uçurumu kapatan asıl mekanik **acil yedek** oldu.
 - Kurtarma oranını en çok "rahat" eşiği (gece iyileşmesi için) etkiledi: tek bir kaynağı eşiğin üstüne çıkaran tek karar her gece iyileşmeyi açıyor.
+
+## 6b. Arayüz kuralları (Oturum 2, oyun testinden sonra)
+- **Görev satırı** (`selectors.mission`): açık sorun varsa, bugün sağlam/hızlı/yaratıcı bir seçeneği mesaiye sığan sorunlardan, oyuncunun bulunduğu istasyondaki önce, yoksa listedeki ilk sorun gösterilir. Hiçbiri sığmıyorsa "mesain yetmiyor, günü bitirirsen ertelenir". Sorun yoksa "işin bitti" ve bakım yapılabilir mi bilgisi.
+- **Sol 1 öğretici kuralları sunum katmanındadır**: Sol 1'de erteleme seçenekleri gösterilmez; bakım işleri ve "Günü bitir" iki sorun çözülene kadar kapalıdır. İçerik ve motor değişmedi (her arızanın hâlâ bir ertele seçeneği var; botlar Sol 1'de erteleyebilir, Kara Kutu alternatif olarak gösterebilir). Gerekçe: botlar, testler ve gün sonu otomatik ertelemesi bozulmadan öğretici zorlanır. Kilitlenme olmaz: iki Sol 1 sorununun en uzun çözümü 5 sa.
+- Öğretici varsayılan açıktır, başlangıç ekranında kapatılabilir, her adımda "Öğreticiyi kapat" vardır. Bekleyen adımlar oyuncunun eylemiyle ilerler.
+- **Zincir notları** içerikte veridir: `SolDef.notes` (brifingde, sabah durumuna göre) ve `OptionDef.notes` (seçenek kartında ve seçimden sonra). Çekirdek notları okumaz; seçiciler `engine.evalCond` ile değerlendirir. Metinler `tr.chain`. Olumsuz durumlar da not olarak yazılır (bayrak hiç kurulmadıysa izde köken yoktur, o yüzden açık not gerekir). Bunun için koşul diline genel bir `{ not: Cond }` eklendi.
+- **Önizleme** (`selectors.previewParts`) seçeneğin kendi etkisini gösterir; acil yedek (tetiklenecek kaynak listesi), kritik saatlerin Sağlık kaybı ve "başka bir sorunu bugün tamamen çözülemez yapar" uyarısı ayrı döner. Ham durum farkı yedeği iyi etki gibi gösterdiği için artık kullanılmıyor.
+- **Sol raporu** (`selectors.solReportRows`): Gündüz / Gece / Sabah bölümleri, iz anahtarına göre birleştirilir, etkisi olmayan satırlar düşer (karar satırları kalır). Her satırın nedeni: kaynak türüne göre sabit bir cümle, ya da izdeki `causes` alanından "Bunu Sol N'de seçtiğin … etkiledi".
+- **Mesai dökümü** (`selectors.hoursLog`) izden yeniden kurulur: her eylemin yürüme + giyinme + iş saati, sabah olaylarının yediği saat.
+- İstasyon kartındaki yürüme süresi bulunduğun yerden gerçek süredir (`walk(A) + walk(B)`).
+- **Kara Kutu listesi**: aynı arızanın sonraki günlerdeki (yeniden açılıp tekrar ertelenen) kararları gizlenir, ilk karar "N gün üst üste ertelendi" notuyla gösterilir. Gizlenenler değiştirilemez; ilkini değiştirmek zinciri değiştirir.
 
 ## 7. Varsayımlar
 - Sol = 10 saat mesai + kritik hasar için 14 gece saati. Mars gününün tam uzunluğu modellenmedi.

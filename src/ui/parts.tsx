@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { tr } from '../content';
-import { criticalResources, healthStatus, resourceStatus, type Status } from '../sim/selectors';
-import { RESOURCES, type Deltas, type GameState, type ResourceId, type SolSnapshot } from '../sim/types';
+import { engine, fmt, tr } from '../content';
+import { criticalResources, healthStatus, previewParts, resourceStatus, type Status } from '../sim/selectors';
+import { RESOURCES, type Action, type Deltas, type GameState, type ResourceId, type SolSnapshot } from '../sim/types';
 import { colors, resourceIcon, statusColor, statusIcon } from './tokens';
 
 export type Level = 'junior' | 'commander';
@@ -10,6 +10,9 @@ export const fmtNum = (n: number, digits = 1) =>
   (Math.round(n * 10 ** digits) / 10 ** digits).toLocaleString('tr-TR', { maximumFractionDigits: digits });
 export const fmtHours = (h: number) => `${fmtNum(h)} ${tr.ui.hoursUnit}`;
 
+/** Arrows for one value change: ▲ / ▼, more arrows for bigger changes. */
+const arrows = (v: number) => (v > 0 ? '▲' : '▼').repeat(Math.abs(v) >= 8 ? 3 : Math.abs(v) >= 3 ? 2 : 1);
+
 export function Bar({
   label,
   icon,
@@ -17,6 +20,7 @@ export function Bar({
   status,
   level,
   hint,
+  change,
 }: {
   label: string;
   icon: string;
@@ -24,12 +28,20 @@ export function Bar({
   status: Status;
   level: Level;
   hint?: string;
+  /** Change caused by the last action (shown next to the label until the next action). */
+  change?: number;
 }) {
   return (
     <div className={`bar bar-${status}`} title={hint}>
       <div className="bar-head">
         <span className="bar-label">
           <span aria-hidden>{icon}</span> {label}
+          {change !== undefined && Math.abs(change) >= 0.5 && (
+            <span className={`bar-change ${change > 0 ? 'up' : 'down'}`}>
+              {' '}
+              {level === 'commander' ? `${change > 0 ? '+' : '−'}${fmtNum(Math.abs(change))}` : arrows(change)}
+            </span>
+          )}
         </span>
         <span className="bar-status" style={{ color: statusColor[status] }}>
           <span aria-hidden>{statusIcon[status]}</span> {level === 'commander' ? fmtNum(value, 0) : tr.status[status]}
@@ -42,11 +54,40 @@ export function Bar({
   );
 }
 
-export function TopBar({ s, level }: { s: GameState; level: Level }) {
+/** Ten one-hour cells: left hours bright, used hours dim. Text says the number too. */
+export function HoursStrip({ left, total }: { left: number; total: number }) {
+  return (
+    <div className="hours-strip" role="meter" aria-valuenow={left} aria-valuemin={0} aria-valuemax={total} aria-label={tr.ui.hoursLeft}>
+      {Array.from({ length: total }, (_, i) => {
+        const fill = Math.max(0, Math.min(1, left - i));
+        return (
+          <span key={i} className="hour-cell">
+            <span style={{ width: `${fill * 100}%` }} />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export function TopBar({
+  s,
+  level,
+  flash = null,
+  coach = null,
+}: {
+  s: GameState;
+  level: Level;
+  /** Last action, to show what it changed next to each bar. */
+  flash?: { action: Action; before: GameState } | null;
+  /** Tutorial highlight. */
+  coach?: 'bars' | 'hours' | null;
+}) {
   const rules = s.config.rules;
+  const change = flash ? (previewParts(engine, flash.before, flash.action).preview ?? {}) : {};
   return (
     <header className="topbar">
-      <div className="sol-counter">
+      <div className={`sol-counter ${coach === 'hours' ? 'coach-target' : ''}`}>
         <span className="sol-big">
           {tr.ui.sol} {s.sol}
         </span>
@@ -55,15 +96,16 @@ export function TopBar({ s, level }: { s: GameState; level: Level }) {
           {tr.ui.of} {s.config.solCount}
         </span>
         <div className="hours">
-          <span aria-hidden>{resourceIcon.hours}</span> {tr.ui.hoursLeft}: <strong>{fmtHours(s.hoursLeft)}</strong>
+          <span aria-hidden>{resourceIcon.hours}</span> {tr.ui.hoursLeft}: <strong>{fmt(tr.ui.hoursOf, { left: fmtNum(s.hoursLeft) })}</strong>
         </div>
+        <HoursStrip left={s.hoursLeft} total={s.config.hoursPerSol} />
         {level === 'commander' && (
           <div className="hours">
             <span aria-hidden>{resourceIcon.dose}</span> {tr.res.dose}: <strong>{fmtNum(s.dose, 0)}</strong>
           </div>
         )}
       </div>
-      <div className="bars">
+      <div className={`bars ${coach === 'bars' ? 'coach-target' : ''}`}>
         {RESOURCES.map((r) => (
           <Bar
             key={r}
@@ -73,9 +115,18 @@ export function TopBar({ s, level }: { s: GameState; level: Level }) {
             status={resourceStatus(s.res[r], rules)}
             level={level}
             hint={tr.resDesc[r]}
+            change={change[r]}
           />
         ))}
-        <Bar label={tr.res.health} icon={resourceIcon.health} value={s.health} status={healthStatus(s.health)} level={level} hint={tr.resDesc.health} />
+        <Bar
+          label={tr.res.health}
+          icon={resourceIcon.health}
+          value={s.health}
+          status={healthStatus(s.health)}
+          level={level}
+          hint={tr.resDesc.health}
+          change={change.health}
+        />
       </div>
     </header>
   );
@@ -113,11 +164,10 @@ export function DeltaList({ d, level, empty }: { d: Deltas | null; level: Level;
     if (k === 'dose' && level === 'junior' && v < 1) continue;
     const good = k === 'dose' ? v < 0 : v > 0;
     const mag = Math.abs(v);
-    const arrows = (v > 0 ? '▲' : '▼').repeat(mag >= 8 ? 3 : mag >= 3 ? 2 : 1);
     parts.push(
       <span key={k} className={`delta ${good ? 'up' : 'down'}`}>
         <span aria-hidden>{resourceIcon[k]}</span> {k === 'dose' ? tr.res.dose : tr.res[k]}{' '}
-        {level === 'commander' ? `${v > 0 ? '+' : '−'}${fmtNum(mag)}` : arrows}
+        {level === 'commander' ? `${v > 0 ? '+' : '−'}${fmtNum(mag)}` : arrows(v)}
       </span>,
     );
   }
@@ -137,10 +187,13 @@ export function Chart({
   series,
   metric,
   height = 140,
+  marker,
 }: {
   series: { name: string; color: string; data: SolSnapshot[]; dashed?: boolean }[];
   metric: 'health' | ResourceId;
   height?: number;
+  /** Vertical marker (e.g. "autopilot from here"). */
+  marker?: { sol: number; label: string; color: string };
 }) {
   const w = 320;
   const h = height;
@@ -164,6 +217,14 @@ export function Chart({
           {sol}
         </text>
       ))}
+      {marker && (
+        <g>
+          <line x1={x(marker.sol - 1)} x2={x(marker.sol - 1)} y1={4} y2={h - pad} stroke={marker.color} strokeWidth={1.2} strokeDasharray="2 3" />
+          <text x={Math.min(x(marker.sol - 1) + 3, w - 70)} y={12} fontSize={8} fill={marker.color}>
+            {marker.label}
+          </text>
+        </g>
+      )}
       {series.map((s) => (
         <polyline
           key={s.name}

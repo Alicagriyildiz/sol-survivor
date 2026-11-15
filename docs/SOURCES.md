@@ -27,3 +27,25 @@ Kural: emin olunmayan sayı ve tarih yazılmadı. Notlarda geçen tek sayısal i
 ## Diğer içerik notları (doğrulama gerekmez ama bilinmeli)
 - Oyundaki sayılar (güç, doz birimi, süreler) **oyun sayılarıdır**, gerçek ölçüm değildir. Oyun bunu "canlı veri" gibi sunmaz.
 - Oyunda "NASA onaylı", "canlı veri", "ilk" gibi ifadeler yoktur; eklenmemeli.
+
+## Oturum 2 denetimi (2026-11-15) — notların sol olayıyla ilgisi
+
+İnternetten doğrulama yapılmadı; aşağıdakiler yalnızca **notun o solün olayıyla ilgili olup olmadığı** ve hafızadaki bilgiyle **çelişip çelişmediği** kontrolüdür. Hiçbir not `verified: true` yapılmadı. Notlarda bu oturumda değişiklik yapılmadı.
+
+| Sol | İlgili mi? | Şüphe / dikkat |
+|---|---|---|
+| 1 | Evet (öğretici sol'ü anlatıyor). | "yaklaşık 40 dakika" hafızadaki ~39-40 dk ile uyumlu; kaynakla doğrulanmalı. |
+| 2 | Evet (su geri kazanım ünitesi). | Genel ifade; belirli bir arıza tarihi verilmiyor, iyi. |
+| 3 | Evet (perklorat). | — |
+| 4 | Evet; "kum serp" seçeneği doğrudan bu olaydan. | **Dikkat:** Kumu dökme işinin yılı ve kazanılan güç miktarı notta yok, eklenmemeli; olay kaynakla doğrulanmalı. |
+| 5 | Evet (oksijen üreteci). | "çok elektrik" niteliksel; sayı yok. |
+| 6 | Kısmen: gerçek bir olay değil, araştırma konusu. Not bunu doğru söylüyor ("araştırıyor"). | — |
+| 7 | Evet (gecikmeli talimat). | Gecikme aralığı ("birkaç dakika… yirmi dakikadan fazla") doğrulanmalı. |
+| 8 | Evet. | — |
+| 9 | Evet (fırtınada güç kaybı). | "Aylarca denendi" doğrulanmalı. |
+| 10 | Evet; "bant ve torba" seçeneği doğrudan bu olaydan. | Notta "karton" var, oyunda seçenek "bant, torba ve hortum": çelişki değil ama hortum notta yok. |
+| 11 | Evet (rüzgarın paneli temizlemesi). | — |
+| 12 | Evet. | **Şüpheli ayrıntı:** olayın tam tarihi (Eylül 2017) ve RAD'ın ölçtüğü artış kaynakla doğrulanmalı. |
+| 13 | Evet; "çay yaprağı" seçeneği doğrudan bu olaydan. | **Şüpheli ayrıntı:** 2020 sızıntısında kullanılanın "çay yaprakları" mı yoksa çay poşeti mi olduğu ve sızıntının hangi modülde olduğu kaynakla doğrulanmalı. Soyuz MS-09 deliğinin yamanma biçimi notta genel tutuldu, iyi. |
+| 14 | Evet (pompa varyantı). Radyatör varyantı için not doğrudan ilgili değil ama aynı soğutma sistemini anlatıyor. | — |
+| 15 | Evet (iniş). | "İniş birkaç dakika sürer" doğrulanmalı. Oyundaki fener/yansıtıcı kurgudur; not bunu gerçek gibi sunmuyor, iyi. |

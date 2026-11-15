@@ -1,6 +1,6 @@
 // The 15-sol scenario as data. Text lives in lang/tr.ts, keyed by the ids used here.
 import { applyTuning, TUNING } from './tuning';
-import type { Amount, Cond, ContentPack, Effect, OptionDef, ResourceId, SolDef } from '../sim/types';
+import type { Amount, ChainNote, Cond, ContentPack, Effect, OptionDef, ResourceId, SolDef } from '../sim/types';
 
 // ---------------------------------------------------------------- effect helpers
 const res = (r: ResourceId, amount: Amount): Effect => ({ kind: 'res', res: r, amount });
@@ -28,6 +28,9 @@ const mod = (id: string, nightly: Partial<Record<ResourceId, number>>, opts: { s
 });
 const unmod = (id: string): Effect => ({ kind: 'removeModifier', id });
 const reopen = (faultId: string): Effect => ({ kind: 'reopen', faultId });
+/** Chain note: text id `id` (lang file `chain`) shown when `when` holds. */
+const note = (when: Cond, id: string): ChainNote => ({ when, id });
+const noFlags = (...flags: string[]): Cond => ({ all: flags.map((f) => ({ notFlag: f })) });
 const defer = (effects: Effect[], tags: OptionDef['tags'] = ['laterCost']): OptionDef => ({
   id: 'defer',
   kind: 'defer',
@@ -35,6 +38,16 @@ const defer = (effects: Effect[], tags: OptionDef['tags'] = ['laterCost']): Opti
   effects,
   tags,
 });
+
+// ---------------------------------------------------------------- chain notes (shared)
+const soilNotes = [note({ flag: 'soilClean' }, 'soilClean'), note({ notFlag: 'soilClean' }, 'soilDirty')];
+const shelterNotes = [
+  note({ flag: 'shelterReinforced' }, 'shelterReinforced'),
+  note({ all: [{ notFlag: 'shelterReinforced' }, { flag: 'shelterWater' }] }, 'shelterWater'),
+  note(noFlags('shelterReinforced', 'shelterWater'), 'shelterThin'),
+];
+const recyclerNotes = [note({ flag: 'recyclerServiced' }, 'recyclerServiced'), note({ notFlag: 'recyclerServiced' }, 'recyclerNotServiced')];
+const tapeNotes = [note({ not: { item: 'tape', gte: 1 } }, 'tapeGone')];
 
 // ---------------------------------------------------------------- sols
 
@@ -106,7 +119,7 @@ const sol3: SolDef = {
           id: 'hydro',
           kind: 'creative',
           hours: 4,
-          effects: [P(-5), flag('soilClean'), garden(2), mod('hydroPump', { power: -0.5 }, { sols: 12 })],
+          effects: [P(-5), flag('soilClean'), garden(1.5), mod('hydroPump', { power: -0.5 }, { sols: 12 })],
           tags: ['invest'],
         },
         { id: 'hardy', kind: 'quick', hours: 1, effects: [garden(0.5)] },
@@ -143,6 +156,7 @@ const sol4: SolDef = {
 
 const sol5: SolDef = {
   sol: 5,
+  notes: soilNotes,
   morning: [L({ roll: 'o2Deficit', mul: -4 })],
   faults: [
     {
@@ -151,8 +165,15 @@ const sol5: SolDef = {
       options: [
         { id: 'fullPower', kind: 'robust', hours: 2, effects: [P(-14), L(12)] },
         { id: 'halfNight', kind: 'quick', hours: 1, effects: [P(-6), L(5)] },
-        { id: 'plants', kind: 'creative', hours: 1, station: 'greenhouse', effects: [P(-1), iff({ flag: 'soilClean' }, [L(7)], [L(2)])] },
-        defer([L(-6)]),
+        {
+          id: 'plants',
+          kind: 'creative',
+          hours: 1,
+          station: 'greenhouse',
+          effects: [P(-1), iff({ flag: 'soilClean' }, [L(7)], [L(2)])],
+          notes: soilNotes,
+        },
+        defer([L(-6), later(1, 'night', 'o2Short', [L(-10)])]),
       ],
     },
   ],
@@ -216,6 +237,7 @@ const sol8: SolDef = {
 
 const sol9: SolDef = {
   sol: 9,
+  notes: [note({ flag: 'stormPrepped' }, 'stormPrepped'), note({ notFlag: 'stormPrepped' }, 'stormNotPrepped')],
   morning: [
     unmod('dust'),
     unmod('dustStays'),
@@ -257,9 +279,15 @@ const sol10: SolDef = {
 
 const sol11: SolDef = {
   sol: 11,
+  notes: [
+    note({ flag: 'panelsSecured' }, 'panelsSecured'),
+    note({ all: [{ notFlag: 'panelsSecured' }, { flag: 'panelsHalf' }] }, 'panelsHalf'),
+    note(noFlags('panelsSecured', 'panelsHalf'), 'panelsLoose'),
+    note({ flag: 'panelsTilted' }, 'panelsTilted'),
+  ],
   morning: [
     flag('storm', false),
-    iff({ flag: 'panelsSecured' }, [mod('stormDust', { power: -3 }, { until: 's11_panels' })], [
+    iff({ flag: 'panelsSecured' }, [mod('stormDust', { power: -1 }, { until: 's11_panels' })], [
       iff({ flag: 'panelsHalf' }, [mod('stormDust', { power: -5 }, { until: 's11_panels' })], [
         mod('stormDust', { power: -6 }, { until: 's11_panels' }),
       ]),
@@ -277,6 +305,7 @@ const sol11: SolDef = {
           kind: 'defer',
           hours: 0,
           tags: ['laterCost'],
+          notes: [note({ flag: 'panelsTilted' }, 'panelsTilted')],
           effects: [
             iff({ any: [{ flag: 'panelsTilted' }, { roll: 'windCleans', eq: 1 }] }, [
               later(1, 'morning', 'windCleaned', [unmod('stormDust'), P(3)]),
@@ -297,15 +326,16 @@ const speHit = (inShelter: [number, number, number]): Effect =>
 
 const sol12: SolDef = {
   sol: 12,
+  notes: shelterNotes,
   faults: [
     {
       id: 's12_spe',
       station: 'shelter',
       options: [
-        { id: 'hideAll', kind: 'robust', hours: 6, effects: [speHit([0.1, 0.2, 0.3])] },
-        { id: 'hideShort', kind: 'quick', hours: 3, effects: [speHit([0.25, 0.35, 0.5])] },
+        { id: 'hideAll', kind: 'robust', hours: 6, effects: [speHit([0.1, 0.2, 0.3])], notes: shelterNotes },
+        { id: 'hideShort', kind: 'quick', hours: 3, effects: [speHit([0.25, 0.35, 0.5])], notes: shelterNotes },
         { id: 'waterCorner', kind: 'creative', hours: 2, station: 'airlock', effects: [L(-4), rad(spe(0.45))] },
-        defer([rad(spe(1))], []),
+        defer([rad(spe(0.8))], []),
       ],
     },
   ],
@@ -313,13 +343,14 @@ const sol12: SolDef = {
 
 const leakOptions = (faultId: string): OptionDef[] => [
   { id: 'patchKit', kind: 'robust', hours: 3, items: { patchKit: 1 }, effects: [L(-1)] },
-  { id: 'teaLeaves', kind: 'creative', hours: 2, items: { tape: 1 }, effects: [] },
+  { id: 'teaLeaves', kind: 'creative', hours: 2, items: { tape: 1 }, effects: [], notes: tapeNotes },
   { id: 'sealOff', kind: 'quick', hours: 1, effects: [L(-2), mod('leakSmall', { life: -1.5 }, { sols: 3 })] },
   defer([reopen(faultId)]),
 ];
 
 const sol13: SolDef = {
   sol: 13,
+  notes: tapeNotes,
   morning: [
     ...[0, 1, 2].flatMap((size) => [
       iff({ all: [{ roll: 'sol13v', eq: 0 }, { roll: 'leakSize', eq: size }] }, [mod('leak', { life: -3 - 1.5 * size }, { until: 's13_leakA' })]),
@@ -343,13 +374,15 @@ const sol13: SolDef = {
 
 const coolingCommon = (faultId: string, robust: OptionDef): OptionDef[] => [
   robust,
-  { id: 'borrowPump', kind: 'creative', hours: 2, requires: { flag: 'recyclerServiced' }, effects: [L(-3)] },
-  { id: 'halfBattery', kind: 'quick', hours: 1, effects: [P(-10)] },
+  // Both happen indoors at the batteries, also when the broken part is the outside radiator.
+  { id: 'borrowPump', kind: 'creative', hours: 2, station: 'battery', requires: { flag: 'recyclerServiced' }, effects: [L(-3)], notes: recyclerNotes },
+  { id: 'halfBattery', kind: 'quick', hours: 1, station: 'battery', effects: [P(-10)] },
   defer([reopen(faultId)]),
 ];
 
 const sol14: SolDef = {
   sol: 14,
+  notes: recyclerNotes,
   morning: [
     iff({ roll: 'sol14v', eq: 0 }, [mod('overheat', { power: -6 }, { until: 's14_pump' })], [
       mod('overheat', { power: -6 }, { until: 's14_radiator' }),
@@ -374,26 +407,52 @@ const sol14: SolDef = {
 
 const sol15: SolDef = {
   sol: 15,
+  notes: [
+    note({ flag: 'beaconReserve' }, 'beaconReserve'),
+    note({ flag: 'sentReport' }, 'sentReport'),
+    note({ flag: 'padClear' }, 'padClear'),
+    note({ all: [{ notFlag: 'padClear' }, { flag: 'padMarked' }] }, 'padMarked'),
+    note(noFlags('beaconReserve', 'sentReport', 'padClear', 'padMarked'), 'unprepared'),
+  ],
   faults: [
     {
       id: 's15_beacon',
       station: 'hub',
       options: [
-        { id: 'fullBeacon', kind: 'robust', hours: 1, effects: [iff({ flag: 'beaconReserve' }, [P(-6)], [P(-22)])] },
+        {
+          id: 'fullBeacon',
+          kind: 'robust',
+          hours: 1,
+          effects: [iff({ flag: 'beaconReserve' }, [P(-6)], [P(-22)])],
+          notes: [note({ flag: 'beaconReserve' }, 'beaconReserve'), note({ notFlag: 'beaconReserve' }, 'noBeaconReserve')],
+        },
         {
           id: 'dimBeacon',
           kind: 'quick',
           hours: 1,
-          effects: [P(-8), iff({ any: [{ flag: 'sentReport' }, { flag: 'padClear' }] }, [L(-4), rad(4)], [L(-10), rad(8), hp(-5, 'life')])],
+          effects: [P(-8), iff({ flag: 'padClear' }, [L(-2)], [iff({ flag: 'sentReport' }, [L(-4), rad(4)], [L(-10), rad(8), hp(-5, 'life')])])],
+          notes: [note({ flag: 'sentReport' }, 'sentReport'), note({ flag: 'padClear' }, 'padClear'), note(noFlags('sentReport', 'padClear'), 'landsFar')],
         },
         {
           id: 'reflectors',
           kind: 'creative',
           hours: 3,
           station: 'landing',
-          effects: [P(-2), iff({ any: [{ flag: 'padClear' }, { flag: 'padMarked' }] }, [], [L(-3)])],
+          effects: [P(-2), iff({ any: [{ flag: 'padClear' }, { flag: 'padMarked' }] }, [], [L(-3), hp(-4, 'life')])],
+          notes: [note({ flag: 'padClear' }, 'padClear'), note({ all: [{ notFlag: 'padClear' }, { flag: 'padMarked' }] }, 'padMarked'), note(noFlags('padClear', 'padMarked'), 'padNotReady')],
         },
-        defer([L(-14), rad(10), hp(-8, 'life')], []),
+        // Without a beacon the lander still finds a cleared or marked pad by sight.
+        {
+          ...defer(
+            [
+              iff({ flag: 'padClear' }, [L(-4), rad(2)], [
+                iff({ flag: 'padMarked' }, [L(-10), rad(7), hp(-4, 'life')], [L(-14), rad(10), hp(-8, 'life')]),
+              ]),
+            ],
+            [],
+          ),
+          notes: [note({ flag: 'padClear' }, 'padClear'), note({ all: [{ notFlag: 'padClear' }, { flag: 'padMarked' }] }, 'padMarked'), note(noFlags('padClear', 'padMarked'), 'noBeaconFar')],
+        },
       ],
     },
   ],

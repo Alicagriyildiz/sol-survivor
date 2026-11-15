@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { sourceText } from '../blackbox/text';
-import { SOURCES, tr } from '../content';
-import { score, solReport } from '../sim/selectors';
-import { RESOURCES, type Deltas, type GameState, type TraceEntry } from '../sim/types';
+import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
+import { SOURCES, engine, fmt, tr } from '../content';
+import { numSuffix } from '../content/lang/tr';
+import { activeNotes, reservesUsed, score, solReportRows, todayFaults, type ReportRow, type ReportSection } from '../sim/selectors';
+import { RESOURCES, type Deltas, type GameState } from '../sim/types';
 import { Chart, DeltaList, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
 
-export function Start({ onStart }: { onStart: (seed: number, level: Level) => void }) {
+export function Start({ onStart }: { onStart: (seed: number, level: Level, tutorial: boolean) => void }) {
   const [seed, setSeed] = useState(() => 1 + Math.floor(Math.random() * 9999));
   const [level, setLevel] = useState<Level>('junior');
+  const [tutorial, setTutorial] = useState(true);
   return (
     <div className="screen start">
       <h1>🔴 {tr.ui.appTitle}</h1>
@@ -31,7 +33,10 @@ export function Start({ onStart }: { onStart: (seed: number, level: Level) => vo
             </label>
           ))}
         </fieldset>
-        <button className="btn primary big" onClick={() => onStart(seed, level)}>
+        <label className="check">
+          <input type="checkbox" checked={tutorial} onChange={(e) => setTutorial(e.target.checked)} /> {tr.tutorial.option}
+        </label>
+        <button className="btn primary big" onClick={() => onStart(seed, level, tutorial)}>
           🚀 {tr.ui.start}
         </button>
       </div>
@@ -52,6 +57,9 @@ export function Start({ onStart }: { onStart: (seed: number, level: Level) => vo
 
 export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
   const t = tr.sols[s.sol]!;
+  const faults = todayFaults(engine, s);
+  const notes = activeNotes(engine, s, engine.content.sols.find((x) => x.sol === s.sol)?.notes);
+  const storm = engine.content.stations.some((st) => st.eva && st.lockedWhen && engine.isLocked(s, st.id) && st.id === 'solar');
   return (
     <div className="screen briefing">
       <p className="dim">
@@ -61,7 +69,29 @@ export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
       <div className="card">
         <h3>🌤 {tr.ui.weather}</h3>
         <p>{t.weather}</p>
+        {storm && <p className="note danger small">🔒 {tr.ui.briefingStorm}</p>}
       </div>
+      <div className="card today-card">
+        <h3>🎯 {tr.ui.briefingToday}</h3>
+        <ul className="today">
+          {faults.map((f) => (
+            <li key={f.faultId}>
+              ⚠ <strong>{faultTitle(f.faultId)}</strong> <span className="dim">· 📍 {tr.stations[f.station]!.name}</span>
+              {f.returning && <span className="badge">{tr.ui.returning}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+      {notes.length > 0 && (
+        <div className="card chain-card">
+          <h3>🔗 {tr.ui.briefingChain}</h3>
+          {notes.map((n) => (
+            <p key={n} className="small">
+              {tr.chain[n]}
+            </p>
+          ))}
+        </div>
+      )}
       <div className="card message">
         <h3>📡 {tr.ui.earthMessage}</h3>
         <p className="quote">“{t.message}”</p>
@@ -82,15 +112,39 @@ export function Briefing({ s, onGo }: { s: GameState; onGo: () => void }) {
   );
 }
 
-function sumEntries(entries: TraceEntry[]): { label: string; d: Deltas }[] {
-  const map = new Map<string, Deltas>();
-  for (const e of entries) {
-    const label = sourceText(e.source) || e.key;
-    const d = map.get(label) ?? {};
-    for (const k of ['power', 'life', 'shield', 'health', 'dose'] as const) if (e.deltas[k]) d[k] = (d[k] ?? 0) + e.deltas[k]!;
-    map.set(label, d);
+const SECTION_TITLE: Record<ReportSection, string> = {
+  day: `☀ ${tr.ui.dayPart}`,
+  night: `🌙 ${tr.ui.nightPart}`,
+  morning: `🌅 ${tr.ui.morningPart}`,
+};
+
+/** Row label plus one plain sentence saying why it happened. */
+function rowText(s: GameState, r: ReportRow): { label: string; reason: string | null } {
+  const src = r.source;
+  const because = r.causes
+    .map((key) => s.decisions.find((d) => d.key === key))
+    .filter((d) => d !== undefined)
+    .map((d) => fmt(tr.ui.because, { sol: d.sol, loc: numSuffix(d.sol, 'loc'), label: optionLabel(d.faultId, d.optionId) }));
+  const why = because.length ? because.join(' ') : null;
+  switch (src.kind) {
+    case 'decision': {
+      const faultId = src.key.split(':')[1]!;
+      const deferred = engine.option(faultId, src.optionId).kind === 'defer';
+      const label = `${faultTitle(faultId)}: ${optionLabel(faultId, src.optionId)}`;
+      if (src.auto) return { label, reason: `${tr.reasons.autoDefer} ${tr.faults[faultId]!.options[src.optionId]!.why}` };
+      return { label, reason: [deferred ? tr.reasons.youDeferred : tr.reasons.youChose, why].filter(Boolean).join(' ') };
+    }
+    case 'routine':
+      return { label: sourceText(src), reason: tr.reasons.routine };
+    case 'night':
+      return r.key.startsWith('heal:') ? { label: tr.res.health, reason: tr.reasons.heal } : { label: tr.effects.night!, reason: tr.reasons.night };
+    case 'reserve':
+      return { label: sourceText(src), reason: tr.reasons.reserve };
+    case 'critical':
+      return { label: sourceText(src), reason: null };
+    default:
+      return { label: sourceText(src), reason: why };
   }
-  return [...map.entries()].map(([label, d]) => ({ label, d }));
 }
 
 export function RealNote({ sol }: { sol: number }) {
@@ -109,7 +163,8 @@ export function RealNote({ sol }: { sol: number }) {
 }
 
 export function SolReport({ s, sol, level, onNext }: { s: GameState; sol: number; level: Level; onNext: () => void }) {
-  const rows = sumEntries(solReport(s, sol));
+  const rows = solReportRows(s, sol);
+  const sections = (['day', 'night', 'morning'] as const).filter((sec) => rows.some((r) => r.section === sec));
   const prev = s.history.find((h) => h.sol === sol - 1) ?? s.history[0]!;
   const now = s.history.find((h) => h.sol === sol) ?? s.history[s.history.length - 1]!;
   const change: Deltas = {};
@@ -127,16 +182,34 @@ export function SolReport({ s, sol, level, onNext }: { s: GameState; sol: number
         </h3>
         <DeltaList d={change} level={level} />
       </div>
-      <div className="card">
-        <h3>🌙 {tr.ui.night}</h3>
-        <ul className="report-list">
-          {rows.map((r) => (
-            <li key={r.label}>
-              <span>{r.label}</span> <DeltaList d={r.d} level={level} />
-            </li>
-          ))}
-        </ul>
-      </div>
+      {sol === s.config.solCount && s.outcome?.won && <p className="lead">{tr.ui.finalDay}</p>}
+      {sections.map((sec) => (
+        <div key={sec} className="card">
+          <h3>
+            {SECTION_TITLE[sec]}
+            {sec === 'morning' && ` (${tr.ui.sol} ${sol + 1})`}
+          </h3>
+          <ul className="report-list">
+            {rows
+              .filter((r) => r.section === sec)
+              .map((r) => {
+                const t = rowText(s, r);
+                return (
+                  <li key={`${r.section}|${r.key}`} className={r.source.kind === 'reserve' ? 'reserve-row' : ''}>
+                    <div className="row between wrap">
+                      <strong>
+                        {r.source.kind === 'reserve' ? '🔋 ' : ''}
+                        {t.label}
+                      </strong>
+                      <DeltaList d={r.deltas} level={level} />
+                    </div>
+                    {t.reason && <div className="dim small">{t.reason}</div>}
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      ))}
       <RealNote sol={sol} />
       <button className="btn primary big" onClick={onNext}>
         {s.outcome ? tr.ui.finalStats : tr.ui.nextSol} →
@@ -185,6 +258,17 @@ export function End({
             ⭐ {tr.ui.score}: <strong>{score(s)}</strong>
           </li>
         </ul>
+        <p className="dim small">⭐ {tr.ui.scoreHint}</p>
+        <p className="small">
+          🔋{' '}
+          {reservesUsed(s).length === 0
+            ? tr.blackbox.noReserve
+            : fmt(tr.blackbox.reserveLine, {
+                list: reservesUsed(s)
+                  .map((r) => fmt(tr.ui.reserveOnSol, { res: tr.res[r.res], sol: r.sol }))
+                  .join(', '),
+              })}
+        </p>
         <Chart metric="health" series={[{ name: 'health', color: colors.accent, data: s.history }]} />
       </div>
       <div className="row wrap">

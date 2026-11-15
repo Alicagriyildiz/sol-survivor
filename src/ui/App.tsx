@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG, engine } from '../content';
 import type { Action, GameState } from '../sim/types';
 import { BlackBox } from './BlackBox';
 import type { Level } from './parts';
-import { Play } from './Play';
+import { Play, type LastAction, type TutorialStep } from './Play';
 import { Briefing, End, SolReport, Start } from './Screens';
 
 type Screen = 'start' | 'briefing' | 'play' | 'report' | 'end' | 'blackbox';
@@ -14,6 +14,9 @@ interface Session {
   level: Level;
   state: GameState;
   actions: Action[];
+  last: LastAction | null;
+  tutorial: TutorialStep | null;
+  tutorialOn: boolean;
 }
 
 export function App() {
@@ -21,15 +24,23 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [reportSol, setReportSol] = useState(1);
 
-  const start = (seed: number, level: Level) => {
-    setSession({ seed, level, state: engine.init(seed, DEFAULT_CONFIG), actions: [] });
+  const start = (seed: number, level: Level, tutorialOn: boolean) => {
+    setSession({
+      seed,
+      level,
+      state: engine.init(seed, DEFAULT_CONFIG),
+      actions: [],
+      last: null,
+      tutorial: tutorialOn ? 'bars' : null,
+      tutorialOn,
+    });
     setScreen('briefing');
   };
 
   const act = (a: Action) => {
     if (!session) return;
     const next = engine.step(session.state, a);
-    setSession({ ...session, state: next, actions: [...session.actions, a] });
+    setSession({ ...session, state: next, actions: [...session.actions, a], last: a.type === 'endSol' ? null : { action: a, before: session.state, after: next } });
     if (a.type === 'endSol') {
       setReportSol(session.state.sol);
       setScreen('report');
@@ -46,7 +57,17 @@ export function App() {
     case 'briefing':
       return <Briefing s={s} onGo={() => setScreen('play')} />;
     case 'play':
-      return <Play s={s} level={session.level} act={act} />;
+      return (
+        <Play
+          s={s}
+          level={session.level}
+          act={act}
+          last={session.last}
+          clearLast={() => setSession({ ...session, last: null })}
+          tutorial={session.tutorial}
+          setTutorial={(t) => setSession((cur) => (cur ? { ...cur, tutorial: t } : cur))}
+        />
+      );
     case 'report':
       return <SolReport s={s} sol={reportSol} level={session.level} onNext={() => setScreen(s.outcome ? 'end' : 'briefing')} />;
     case 'end':
@@ -56,7 +77,7 @@ export function App() {
           level={session.level}
           onBlackBox={() => setScreen('blackbox')}
           onAgain={() => setScreen('start')}
-          onSame={() => start(session.seed, session.level)}
+          onSame={() => start(session.seed, session.level, session.tutorialOn)}
         />
       );
     case 'blackbox':
