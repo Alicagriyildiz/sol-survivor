@@ -7,8 +7,20 @@ import { RESOURCES, type Deltas, type GameState } from '../sim/types';
 import { DoseCompare, SpaceWeatherLine, StormLine, StudyLine } from './DataViews';
 import { Chart, DeltaList, fmtMGy, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
+import { webglAvailable, type View } from './view';
 
-export function Start({ onStart, onData }: { onStart: (seed: number, level: Level, tutorial: boolean) => void; onData: () => void }) {
+export function Start({
+  onStart,
+  onData,
+  view,
+  setView,
+}: {
+  onStart: (seed: number, level: Level, tutorial: boolean) => void;
+  onData: () => void;
+  view: View;
+  setView: (v: View) => void;
+}) {
+  const can3d = webglAvailable();
   const [seed, setSeed] = useState(() => 1 + Math.floor(Math.random() * 9999));
   const [level, setLevel] = useState<Level>('junior');
   const [tutorial, setTutorial] = useState(true);
@@ -31,6 +43,16 @@ export function Start({ onStart, onData }: { onStart: (seed: number, level: Leve
               <input type="radio" name="level" checked={level === l} onChange={() => setLevel(l)} />
               <strong>{l === 'junior' ? tr.ui.junior : tr.ui.commander}</strong>
               <span className="dim small">{l === 'junior' ? tr.ui.juniorHint : tr.ui.commanderHint}</span>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="levels views">
+          <legend>{tr.ui.viewLabel}</legend>
+          {(['3d', '2d'] as View[]).map((v) => (
+            <label key={v} className={`level ${view === v ? 'on' : ''} ${v === '3d' && !can3d ? 'disabled' : ''}`}>
+              <input type="radio" name="view" checked={view === v} disabled={v === '3d' && !can3d} onChange={() => setView(v)} />
+              <strong>{v === '3d' ? `🧊 ${tr.ui.view3d}` : `▦ ${tr.ui.view2d}`}</strong>
+              <span className="dim small">{v === '3d' ? (can3d ? tr.ui.view3dHint : tr.ui.view3dNo) : tr.ui.view2dHint}</span>
             </label>
           ))}
         </fieldset>

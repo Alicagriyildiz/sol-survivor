@@ -4,23 +4,29 @@
 // Mars, cyan/teal accent, yellow warning, red-magenta danger, green-teal ok.
 
 export const colors = {
-  bg: '#0e1424',
-  bgDeep: '#0a0f1c',
-  surface: '#161f35',
-  surface2: '#1e2944',
-  border: '#2d3a5c',
-  text: '#e7eaf2',
-  textDim: '#9ba5bd',
+  // Session 5: lighter navy so surfaces separate clearly (was #0e1424 / #161f35).
+  bg: '#1d2745',
+  bgDeep: '#151d36',
+  surface: '#28345a',
+  surface2: '#34426d',
+  border: '#56679a',
+  text: '#f3f5fa',
+  textDim: '#bcc5da',
   marsRose: '#b08884',
   marsBrown: '#7d5f5c',
   marsDust: '#c9b3ae',
-  grey: '#6f7890',
+  marsGround: '#9a7a76',
+  grey: '#8a93a8',
   accent: '#38d0d6',
   accentDim: '#1f7f86',
   ok: '#3ccf9e',
   warn: '#f0d64a',
   danger: '#e2457f',
-  original: '#9ba5bd',
+  night: '#0b1228',
+  sky: '#c7a9a6',
+  skyEvent: '#b98ab8',
+  plant: '#4fae84',
+  original: '#bcc5da',
   alt: '#38d0d6',
 } as const;
 
@@ -54,6 +60,13 @@ export const resourceIcon = {
   dose: '☢',
   hours: '⏱',
 } as const;
+
+/** Inventory icons (the name is always given too, as label/tooltip). */
+export const itemIcon: Record<string, string> = {
+  patchKit: '🧰',
+  spareFilter: '🌀',
+  tape: '🎞',
+};
 
 export const radius = 10;
 export const font = 'system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif';

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { SolarEventCard } from './DataViews';
 import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
 import { engine, fmt, tr } from '../content';
@@ -16,9 +16,15 @@ import {
   type RoutineView,
 } from '../sim/selectors';
 import type { Action, GameState, Invalid, ResourceId } from '../sim/types';
-import { DeltaList, fmtHours, TopBar, Warnings, type Level } from './parts';
+import { DeltaList, fmtHours, Inventory, TopBar, Warnings, type Level } from './parts';
+import { stationInfo, type StationInfo } from './stationInfo';
+import { markSceneBroken, SceneBoundary, sceneBroken, webglAvailable, type View } from './view';
+import { sceneLook } from '../scene/look';
 
-/** The last action and the states around it, for the "what just happened" card. */
+// The 3D scene is a separate chunk, loaded only when the 3D view is on.
+const Scene3D = lazy(() => import('../scene/Scene3D'));
+
+/** The last action and the states around it, for the "what just happened" line. */
 export interface LastAction {
   action: Action;
   before: GameState;
@@ -28,6 +34,8 @@ export interface LastAction {
 /** Sol-1 tutorial steps, in order. `null` = tutorial off or finished. */
 export const TUTORIAL = ['bars', 'hours', 'goHub', 'choose', 'seal', 'done'] as const;
 export type TutorialStep = (typeof TUTORIAL)[number];
+
+const NIGHT_MS = 1100;
 
 const invalidText = (r: Invalid): string => {
   switch (r) {
@@ -46,16 +54,35 @@ const invalidText = (r: Invalid): string => {
 
 const resList = (rs: ResourceId[]) => rs.map((r) => tr.res[r]).join(', ');
 
+/** Small tutorial bubble placed next to what it talks about. One short sentence. */
+export function CoachBubble({ text, onNext, onSkip, inline = false }: { text: string; onNext?: (() => void) | null; onSkip: () => void; inline?: boolean }) {
+  return (
+    <div className={`coach-bubble ${inline ? 'inline' : ''}`} role="note">
+      <span aria-hidden>🧑‍🚀 </span>
+      {text}
+      <div className="row coach-actions">
+        {onNext && (
+          <button className="btn primary small" onClick={onNext}>
+            {tr.tutorial.next}
+          </button>
+        )}
+        <button className="btn ghost small" onClick={onSkip} aria-label={tr.tutorial.skip} title={tr.tutorial.skip}>
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CostLine({ v }: { v: { cost: OptionView['cost'] } }) {
   const c = v.cost;
   const parts: string[] = [];
-  if (c.walk > 0) parts.push(`${fmtHours(c.walk)} ${tr.ui.hoursWalk}`);
-  if (c.eva > 0) parts.push(`${fmtHours(c.eva)} ${tr.ui.hoursEva}`);
-  if (parts.length) parts.push(`${fmtHours(c.work)} ${tr.ui.hoursWork}`);
+  if (c.walk > 0) parts.push(`👟 ${fmtHours(c.walk)}`);
+  if (c.eva > 0) parts.push(`🚀 ${fmtHours(c.eva)}`);
+  if (parts.length) parts.push(`🔧 ${fmtHours(c.work)}`);
   return (
     <span className="cost">
-      ⏱ <strong>{fmtHours(c.total)}</strong> {parts.length > 0 && <span className="dim">({parts.join(' + ')})</span>}
-      {c.evaTrip && <span className="badge eva">{tr.ui.eva}</span>}
+      ⏱ <strong>{fmtHours(c.total)}</strong> {parts.length > 0 && <span className="dim small">({parts.join(' + ')})</span>}
     </span>
   );
 }
@@ -71,33 +98,42 @@ function PreviewNotes({ v }: { v: Pick<OptionView, 'reserves' | 'critHealth' | '
   );
 }
 
+function Why({ text }: { text: string }) {
+  return (
+    <details className="why">
+      <summary>ⓘ {tr.ui.whyBtn}</summary>
+      <p>{text}</p>
+    </details>
+  );
+}
+
 function OptionCard({ v, level, onChoose }: { v: OptionView; level: Level; onChoose: () => void }) {
   const t = tr.faults[v.faultId]!.options[v.optionId]!;
   const items = engine.option(v.faultId, v.optionId).items ?? {};
   return (
     <div className={`option ${v.invalid ? 'disabled' : ''}`}>
       <div className="option-head">
-        <strong>{t.label}</strong>
+        <strong className="option-label">{t.label}</strong>
         <CostLine v={v} />
       </div>
-      {Object.keys(items).length > 0 && (
-        <div className="dim small">
-          {tr.ui.needs}: {Object.entries(items).map(([k, n]) => `${tr.items[k]} ×${n}`).join(', ')}
-        </div>
-      )}
-      <p className="why">{t.why}</p>
+      <div className="option-row">
+        <DeltaList d={v.preview} level={level} empty={<span className="dim small">—</span>} />
+        {Object.keys(items).length > 0 && (
+          <span className="small">
+            {tr.ui.needs}: {Object.entries(items).map(([k, n]) => `${tr.items[k]} ×${n}`).join(', ')}
+          </span>
+        )}
+        {level === 'junior' && v.tags.includes('invest') && <span className="tag invest">💡 {tr.ui.investHint}</span>}
+        {level === 'junior' && v.tags.includes('laterCost') && <span className="tag later">⏳ {tr.ui.laterCostHint}</span>}
+      </div>
       {v.notes.map((n) => (
         <p key={n} className="chain-note small">
           🔗 {tr.chain[n]}
         </p>
       ))}
-      {level === 'junior' && v.tags.includes('invest') && <div className="tag invest">💡 {tr.ui.investHint}</div>}
-      {level === 'junior' && v.tags.includes('laterCost') && <div className="tag later">⏳ {tr.ui.laterCostHint}</div>}
       {!v.invalid && <PreviewNotes v={v} />}
       <div className="option-foot">
-        <span>
-          <span className="dim small">{tr.ui.now}:</span> <DeltaList d={v.preview} level={level} empty={<span className="dim small">—</span>} />
-        </span>
+        <Why text={t.why} />
         {v.invalid ? (
           <span className="invalid">⛔ {invalidText(v.invalid)}</span>
         ) : (
@@ -115,13 +151,15 @@ function RoutineCard({ v, level, lockedText, onDo }: { v: RoutineView; level: Le
   return (
     <div className={`option routine ${v.invalid || lockedText ? 'disabled' : ''}`}>
       <div className="option-head">
-        <strong>🔧 {t.label}</strong>
+        <strong className="option-label">🔧 {t.label}</strong>
         <CostLine v={v} />
       </div>
-      <p className="why">{t.why}</p>
+      <div className="option-row">
+        <DeltaList d={v.preview} level={level} />
+      </div>
       {!v.invalid && !lockedText && <PreviewNotes v={v} />}
       <div className="option-foot">
-        <DeltaList d={v.preview} level={level} />
+        <Why text={t.why} />
         {lockedText ? (
           <span className="invalid">⛔ {lockedText}</span>
         ) : v.invalid ? (
@@ -141,6 +179,7 @@ function StationPanel({
   stationId,
   level,
   sol1,
+  coach,
   act,
   open,
   close,
@@ -149,6 +188,7 @@ function StationPanel({
   stationId: string;
   level: Level;
   sol1: boolean;
+  coach: ReactNode;
   act: (a: Action) => void;
   open: (station: string) => void;
   close: () => void;
@@ -158,28 +198,49 @@ function StationPanel({
   const elsewhere = [...new Set(s.faults.map((f) => engine.fault(f.faultId).station))].filter((x) => x !== stationId);
   // Sol 1 is the tutorial: no deferring, and maintenance only after both faults are fixed.
   const routineLock = sol1 && s.faults.length > 0 ? tr.ui.sol1Locked : null;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const closeFn = useRef(close);
+  closeFn.current = close;
+  useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeFn.current();
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      // Give keyboard users their place back.
+      if (before && document.contains(before)) before.focus();
+    };
+  }, [stationId]);
   return (
     <div className="panel-backdrop" onClick={close}>
-      <section className="panel" role="dialog" aria-label={st.name} onClick={(e) => e.stopPropagation()}>
+      <section className="panel" role="dialog" aria-modal="true" aria-label={st.name} onClick={(e) => e.stopPropagation()}>
         <div className="panel-head">
           <h2>{st.name}</h2>
-          <button className="btn ghost" onClick={close} aria-label={tr.ui.close}>
+          <button ref={closeRef} className="btn ghost" onClick={close} aria-label={tr.ui.close}>
             ✕
           </button>
         </div>
-        <p className="dim">{st.desc}</p>
-        {!view.here && !view.locked && <p className="dim small">👟 {tr.ui.panelFree}</p>}
-        {view.eva && <p className="note">🚀 {tr.ui.evaShort}</p>}
-        {view.locked && <p className="note danger">🔒 {stationId === 'landing' && s.sol < 13 ? tr.ui.lockedLanding : tr.ui.lockedStorm}</p>}
+        {(view.eva || view.locked) && (
+          <div className="row wrap">
+            {view.eva && (
+              <details className="why">
+                <summary>🚀 {tr.ui.eva}</summary>
+                <p>{tr.ui.evaShort}</p>
+              </details>
+            )}
+            {view.locked && <p className="note danger">🔒 {stationId === 'landing' && s.sol < 13 ? tr.ui.lockedLanding : tr.ui.lockedStorm}</p>}
+          </div>
+        )}
+        {coach}
         {view.faults.length === 0 && (
           <div className="note ok-note">
             <p>✓ {tr.ui.noProblemsHere}</p>
             {elsewhere.length > 0 ? (
               <div className="row wrap">
-                <span className="small">{tr.ui.problemsElsewhere}</span>
                 {elsewhere.map((x) => (
                   <button key={x} className="btn small primary" onClick={() => open(x)}>
-                    📍 {tr.stations[x]!.name}
+                    ⚠ {tr.stations[x]!.name} →
                   </button>
                 ))}
               </div>
@@ -191,7 +252,7 @@ function StationPanel({
         {view.faults.map((fid) => (
           <div key={fid} className="fault">
             <h3>⚠ {tr.faults[fid]!.title}</h3>
-            <p>{tr.faults[fid]!.desc}</p>
+            <p className="fault-desc">{tr.faults[fid]!.desc}</p>
             {fid === 's12_spe' && <SolarEventCard s={s} />}
             <div className="options">
               {optionViews(engine, s, fid)
@@ -202,60 +263,91 @@ function StationPanel({
             </div>
           </div>
         ))}
-        <div className="fault">
-          <h3 className="routine-title">{tr.ui.routineTitle}</h3>
-          {view.routines.length === 0 ? (
-            <p className="dim small">{tr.ui.noRoutineHere}</p>
-          ) : (
-            <>
-              <p className="dim small">{tr.ui.routineHint}</p>
-              {view.routines.map((rid) => (
-                <RoutineCard
-                  key={rid}
-                  v={routineView(engine, s, rid)}
-                  level={level}
-                  lockedText={routineLock}
-                  onDo={() => act({ type: 'routine', routineId: rid })}
-                />
-              ))}
-            </>
-          )}
-        </div>
+        {view.routines.length > 0 && (
+          <div className="fault">
+            <h3 className="routine-title">🔧 {tr.ui.routineTitle}</h3>
+            {view.routines.map((rid) => (
+              <RoutineCard key={rid} v={routineView(engine, s, rid)} level={level} lockedText={routineLock} onDo={() => act({ type: 'routine', routineId: rid })} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-/** Always-visible task line + today's faults with status + where the hours went. */
+/** Where today's hours went, behind a ⏱ icon. */
+function HoursLog({ s }: { s: GameState }) {
+  const log = hoursLog(engine, s);
+  return (
+    <details className="hours-pop">
+      <summary aria-label={tr.ui.hoursBtn} title={tr.ui.hoursBtn}>
+        ⏱<span className="sr-only"> {tr.ui.hoursBtn}</span>
+      </summary>
+      <div className="popover small">
+        <strong>{tr.ui.hoursTitle}</strong>
+        {log.length === 0 ? (
+          <p className="dim">{tr.ui.hoursNone}</p>
+        ) : (
+          <ul>
+            {log.map((h, i) => {
+              const parts: string[] = [];
+              if (h.walk > 0) parts.push(`👟 ${fmtHours(h.walk)}`);
+              if (h.eva > 0) parts.push(`🚀 ${fmtHours(h.eva)}`);
+              if (parts.length) parts.push(`🔧 ${fmtHours(h.work)}`);
+              const label = h.kind === 'event' ? `${tr.ui.hoursEvent}: ${sourceText(h.source)}` : sourceText(h.source);
+              return (
+                <li key={i}>
+                  <strong>{fmtHours(h.total)}</strong> {label} {parts.length > 0 && <span className="dim">({parts.join(' + ')})</span>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </details>
+  );
+}
+
+/** One task line: what to do and where (place and walking cost, never which option). */
 function MissionBar({
   s,
-  sol1,
+  info,
   open,
   endDay,
-  highlight,
+  coach,
 }: {
   s: GameState;
-  sol1: boolean;
+  info: StationInfo[];
   open: (station: string) => void;
   endDay: () => void;
-  highlight: boolean;
+  coach: ReactNode;
 }) {
   const m = mission(engine, s);
   const faults = todayFaults(engine, s);
-  const log = hoursLog(engine, s);
   let text: ReactNode = null;
   let button: ReactNode = null;
+  let main: string | null = null;
   if (m.kind === 'fault') {
+    main = m.faultId;
     const fault = faultTitle(m.faultId);
     const station = tr.stations[m.station]!;
-    text = !m.fixable
-      ? fmt(tr.ui.missionNoHours, { fault })
-      : m.here
-        ? fmt(tr.ui.missionHere, { station: station.name, fault })
-        : fmt(tr.ui.missionGo, { to: station.to, fault });
+    const walk = info.find((x) => x.id === m.station)?.walk ?? 0;
+    text = !m.fixable ? (
+      fmt(tr.ui.missionNoHours, { fault })
+    ) : m.here ? (
+      fmt(tr.ui.missionHere, { station: station.name, fault })
+    ) : (
+      <>
+        {fmt(tr.ui.missionGo, { to: station.to, fault })}{' '}
+        <span className="chip-cost" title={tr.ui.walkTo}>
+          {fmt(tr.ui.missionWalk, { h: fmtHours(walk) })}
+        </span>
+      </>
+    );
     button = m.fixable ? (
       <button className="btn primary" onClick={() => open(m.station)}>
-        📍 {station.name} →
+        📍 {m.here ? tr.ui.openStation : station.name} →
       </button>
     ) : (
       <button className="btn primary" onClick={endDay}>
@@ -270,77 +362,56 @@ function MissionBar({
       </button>
     );
   }
+  const chips = faults.filter((f) => f.faultId !== main);
   return (
-    <section className={`mission ${highlight ? 'coach-target' : ''}`} aria-live="polite">
+    <section className={`mission ${coach ? 'coach-target' : ''}`} aria-live="polite">
       <div className="mission-line">
-        <span className="mission-label">🎯 {tr.ui.mission}:</span> <span className="mission-text">{text}</span>
+        <span className="mission-icon" aria-hidden>
+          🎯
+        </span>
+        <span className="sr-only">{tr.ui.mission}: </span>
+        <span className="mission-text">{text}</span>
         {button}
+        <HoursLog s={s} />
       </div>
-      <ul className="today">
-        {faults.length === 0 && <li className="dim small">{tr.ui.noFaultsToday}</li>}
-        {faults.map((f) => (
-          <li key={f.faultId} className={`today-item st-${f.status}`}>
-            <button className="link" onClick={() => open(f.station)}>
-              {f.status === 'open' ? '⚠' : f.status === 'solved' ? '✓' : '⏳'} {faultTitle(f.faultId)}
-            </button>{' '}
-            <span className="dim small">
-              · {tr.stations[f.station]!.name} ·{' '}
-              <strong className="st">{f.status === 'open' ? tr.ui.stOpen : f.status === 'solved' ? tr.ui.stSolved : tr.ui.stDeferred}</strong>
-              {f.returning && ` · ${tr.ui.returning}`}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <details className="hours-log">
-        <summary>⏱ {tr.ui.hoursTitle}</summary>
-        {log.length === 0 ? (
-          <p className="dim small">{tr.ui.hoursNone}</p>
-        ) : (
-          <ul className="small">
-            {log.map((h, i) => {
-              const parts: string[] = [];
-              if (h.walk > 0) parts.push(`${fmtHours(h.walk)} ${tr.ui.hoursWalk}`);
-              if (h.eva > 0) parts.push(`${fmtHours(h.eva)} ${tr.ui.hoursEva}`);
-              if (parts.length) parts.push(`${fmtHours(h.work)} ${tr.ui.hoursWork}`);
-              const label = h.kind === 'event' ? `${tr.ui.hoursEvent}: ${sourceText(h.source)}` : sourceText(h.source);
-              return (
-                <li key={i}>
-                  <strong>{fmtHours(h.total)}</strong> {label} {parts.length > 0 && <span className="dim">({parts.join(' + ')})</span>}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </details>
-      {sol1 && s.faults.length > 0 && <p className="dim small">{tr.ui.sol1Locked}</p>}
+      {chips.length > 0 && (
+        <ul className="chips" aria-label={tr.ui.todayTitle}>
+          {chips.map((f) => {
+            const word = f.status === 'open' ? tr.ui.stOpen : f.status === 'solved' ? tr.ui.stSolved : tr.ui.stDeferred;
+            return (
+              <li key={f.faultId}>
+                <button className={`chip st-${f.status}`} onClick={() => open(f.station)} title={`${tr.stations[f.station]!.name} · ${word}`}>
+                  <span aria-hidden>{f.status === 'open' ? '⚠' : f.status === 'solved' ? '✓' : '⏳'}</span> {faultTitle(f.faultId)}
+                  <span className="sr-only"> · {word}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {coach}
     </section>
   );
 }
 
-/** "What just happened": the last action, its effect, reserve and chain notes. */
-function LastActionCard({ last, level, onClose }: { last: LastAction; level: Level; onClose: () => void }) {
+/** "What just happened": one line (the bars show the arrows), plus chain notes and reserve. */
+function LastActionLine({ last, onClose }: { last: LastAction; onClose: () => void }) {
   const { action, before, after } = last;
   if (action.type === 'endSol') return null;
   const parts = previewParts(engine, before, action);
   const hours = before.hoursLeft - after.hoursLeft;
-  const title =
-    action.type === 'resolve'
-      ? `${faultTitle(action.faultId)}: ${optionLabel(action.faultId, action.optionId)}`
-      : tr.routines[action.routineId]!.label;
+  const title = action.type === 'resolve' ? optionLabel(action.faultId, action.optionId) : tr.routines[action.routineId]!.label;
   const notes = action.type === 'resolve' ? activeNotes(engine, before, engine.option(action.faultId, action.optionId).notes) : [];
-  const empty = !parts.preview || Object.keys(parts.preview).filter((k) => k !== 'items').length === 0;
   return (
-    <section className="last card" role="status">
+    <section className="last" role="status">
       <div className="row between">
-        <h3>✓ {tr.ui.lastTitle}</h3>
+        <p className="last-line">
+          ✓ <strong>{title}</strong> <span className="dim">· ⏱ {fmtHours(hours)}</span>
+        </p>
         <button className="btn ghost small" onClick={onClose} aria-label={tr.ui.close}>
           ✕
         </button>
       </div>
-      <p>
-        <strong>{title}</strong> <span className="dim small">· ⏱ {fmt(tr.ui.lastHours, { h: fmtHours(hours) })}</span>
-      </p>
-      {empty ? <p className="dim small">{tr.ui.lastNoEffect}</p> : <DeltaList d={parts.preview} level={level} />}
       {notes.map((n) => (
         <p key={n} className="chain-note small">
           🔗 {tr.chain[n]}
@@ -356,22 +427,62 @@ function LastActionCard({ last, level, onClose }: { last: LastAction; level: Lev
   );
 }
 
-function Coach({ step, onNext, onSkip }: { step: TutorialStep; onNext: (() => void) | null; onSkip: () => void }) {
+/** One station card of the simple view. */
+function StationCard({ v, onOpen, coach }: { v: StationInfo; onOpen: () => void; coach: ReactNode }) {
+  const st = tr.stations[v.id]!;
   return (
-    <section className="coach card" role="note">
-      <p className="coach-title">🧑‍🚀 {tr.tutorial.title}</p>
-      <p>{tr.tutorial[step]}</p>
-      <div className="row wrap">
-        {onNext && (
-          <button className="btn primary" onClick={onNext}>
-            {tr.tutorial.next}
-          </button>
-        )}
-        <button className="btn ghost small" onClick={onSkip}>
-          {tr.tutorial.skip}
-        </button>
-      </div>
+    <div className="station-wrap">
+      <button
+        className={`station ${v.faults ? 'has-fault' : ''} ${v.locked ? 'locked' : ''} ${v.here ? 'here' : ''} ${coach ? 'coach-target' : ''}`}
+        onClick={onOpen}
+      >
+        <div className="station-name">
+          {v.locked && <span aria-hidden>🔒 </span>}
+          {st.name}
+        </div>
+        <div className="station-badges">
+          {v.faults > 0 && (
+            <span className="sbadge fault">
+              ⚠ {v.faults} {tr.ui.problems}
+            </span>
+          )}
+          {v.routine && !v.locked && (
+            <span className={`sbadge routine ${v.routine.ok ? '' : 'off'}`} title={fmt(tr.ui.routineBadge, { h: fmtHours(v.routine.hours) })}>
+              🔧 {v.routine.done ? '✓' : fmtHours(v.routine.hours)}
+            </span>
+          )}
+          {v.locked && <span className="sbadge locked">{tr.ui.locked}</span>}
+        </div>
+        <div className="station-meta">
+          {v.here ? <span>📍 {tr.ui.location}</span> : <span>👟 {fmtHours(v.walk)}</span>}
+          {v.eva && <span className="badge eva">🚀 {tr.ui.eva}</span>}
+        </div>
+      </button>
+      {coach}
+    </div>
+  );
+}
+
+export function StationGrid({ info, open, coachFor }: { info: StationInfo[]; open: (id: string) => void; coachFor: (id: string) => ReactNode }) {
+  return (
+    <section className="stations" aria-label={tr.ui.stations}>
+      {info.map((v) => (
+        <StationCard key={v.id} v={v} onOpen={() => open(v.id)} coach={coachFor(v.id)} />
+      ))}
     </section>
+  );
+}
+
+function ViewSwitch({ view, setView, can3d }: { view: View; setView: (v: View) => void; can3d: boolean }) {
+  return (
+    <div className="view-switch" role="group" aria-label={tr.ui.viewLabel}>
+      <button className={`btn small ${view === '3d' ? 'on' : ''}`} aria-pressed={view === '3d'} disabled={!can3d} onClick={() => setView('3d')}>
+        🧊 {tr.ui.view3d}
+      </button>
+      <button className={`btn small ${view === '2d' ? 'on' : ''}`} aria-pressed={view === '2d'} onClick={() => setView('2d')}>
+        ▦ {tr.ui.view2d}
+      </button>
+    </div>
   );
 }
 
@@ -383,6 +494,8 @@ export function Play({
   clearLast,
   tutorial,
   setTutorial,
+  view,
+  setView,
 }: {
   s: GameState;
   level: Level;
@@ -391,12 +504,29 @@ export function Play({
   clearLast: () => void;
   tutorial: TutorialStep | null;
   setTutorial: (t: TutorialStep | null) => void;
+  view: View;
+  setView: (v: View) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  /** 3D view: the station the astronaut is walking to (the panel opens on arrival). */
+  const [walking, setWalking] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
-  const stations = stationViews(engine, s);
+  const [night, setNight] = useState(false);
+  const [sceneFailed, setSceneFailedState] = useState(sceneBroken);
+  const setSceneFailed = (v: boolean) => {
+    if (v) markSceneBroken();
+    setSceneFailedState(v);
+  };
+  const nightTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (nightTimer.current) window.clearTimeout(nightTimer.current);
+  }, []);
+  const can3d = webglAvailable() && !sceneFailed;
+  const use3d = view === '3d' && can3d;
   const sol1 = s.sol === 1;
+  const info = stationInfo(s, sol1);
   const endLocked = sol1 && s.faults.length > 0;
+  const m = mission(engine, s);
 
   // Tutorial steps that wait for the player to do something advance here.
   const step: TutorialStep | null = (() => {
@@ -409,96 +539,132 @@ export function Play({
     if (tutorial === 'seal') return solved('s1_seal') ? (solved('s1_wakeup') ? 'done' : 'goHub') : 'seal';
     return tutorial;
   })();
+  const skipTutorial = () => setTutorial(null);
+  const bubble = (inline = false) =>
+    step ? (
+      <CoachBubble
+        text={tr.tutorial[step]}
+        inline={inline}
+        onNext={step === 'bars' ? () => setTutorial('hours') : step === 'hours' ? () => setTutorial('goHub') : null}
+        onSkip={skipTutorial}
+      />
+    ) : null;
+  const coachStation = step === 'goHub' ? 'hub' : step === 'seal' && open !== 'airlock' ? 'airlock' : null;
 
+  const busy = night || walking !== null;
+  const openStation = (id: string) => {
+    if (busy) return;
+    // 3D: walk there first, the panel opens on arrival. Already there: open right away.
+    if (use3d && !open && id !== s.location) setWalking(id);
+    else setOpen(id);
+  };
   const doAct = (a: Action) => {
+    if (busy) return;
     act(a);
     setOpen(null);
     if (step && step !== 'bars' && step !== 'hours') setTutorial(step);
   };
+  const reallyEnd = () => {
+    setConfirm(false);
+    setOpen(null);
+    if (!use3d) return act({ type: 'endSol' });
+    if (night) return;
+    setNight(true);
+    nightTimer.current = window.setTimeout(() => {
+      nightTimer.current = null;
+      setNight(false);
+      act({ type: 'endSol' });
+    }, NIGHT_MS);
+  };
   const endDay = () => {
-    if (endLocked) return;
+    if (endLocked || busy) return;
     const crit = criticalResources(s).length > 0 && s.hoursLeft > 0;
     if (s.faults.length || crit || s.sol === s.config.solCount) setConfirm(true);
-    else act({ type: 'endSol' });
+    else reallyEnd();
   };
-  const target = (what: 'bars' | 'hours' | 'mission' | string) =>
-    (step === 'bars' && what === 'bars') ||
-    (step === 'hours' && what === 'hours') ||
-    (step === 'goHub' && what === 'hub') ||
-    (step === 'seal' && what === 'airlock') ||
-    (step === 'done' && what === 'mission');
+
+  const grid = <StationGrid info={info} open={openStation} coachFor={(id) => (id === coachStation ? bubble() : null)} />;
 
   return (
-    <div className="play">
-      <TopBar s={s} level={level} flash={last && last.action.type !== 'endSol' ? last : null} coach={step === 'bars' ? 'bars' : step === 'hours' ? 'hours' : null} />
+    <div className={`play ${use3d ? 'view-3d' : 'view-2d'}`}>
+      <TopBar
+        s={s}
+        level={level}
+        flash={last && last.action.type !== 'endSol' ? last : null}
+        coach={step === 'bars' || step === 'hours' ? { at: step, bubble: bubble() } : null}
+        extra={<ViewSwitch view={use3d ? '3d' : '2d'} setView={setView} can3d={can3d} />}
+      />
       <Warnings s={s} />
       <div className="play-top">
-        {step && (
-          <Coach
-            step={step}
-            onNext={step === 'bars' ? () => setTutorial('hours') : step === 'hours' ? () => setTutorial('goHub') : null}
-            onSkip={() => setTutorial(null)}
-          />
-        )}
-        <MissionBar s={s} sol1={sol1} open={setOpen} endDay={endDay} highlight={target('mission')} />
-        {last && <LastActionCard last={last} level={level} onClose={clearLast} />}
+        <MissionBar s={s} info={info} open={openStation} endDay={endDay} coach={step === 'done' ? bubble() : null} />
+        {last && <LastActionLine last={last} onClose={clearLast} />}
       </div>
       <main className="play-main">
-        <section className="stations" aria-label={tr.ui.stations}>
-          {stations.map((v) => {
-            const st = tr.stations[v.id]!;
-            return (
-              <button
-                key={v.id}
-                className={`station ${v.faults.length ? 'has-fault' : ''} ${v.locked ? 'locked' : ''} ${v.here ? 'here' : ''} ${target(v.id) ? 'coach-target' : ''}`}
-                onClick={() => setOpen(v.id)}
-              >
-                <div className="station-name">{st.name}</div>
-                <div className="station-meta">
-                  {(() => {
-                    const w = v.here ? 0 : v.walk + (stations.find((x) => x.here)?.walk ?? 0);
-                    return w > 0 ? `${fmtHours(w)} ${tr.ui.walk}` : tr.ui.noWalk;
-                  })()}
-                  {v.eva && <span className="badge eva">{tr.ui.eva}</span>}
-                  {v.locked && <span className="badge locked">🔒 {tr.ui.locked}</span>}
+        {use3d ? (
+          <SceneBoundary fallback={grid} onError={() => setSceneFailed(true)}>
+            <Suspense
+              fallback={
+                <div>
+                  <p className="dim small">{tr.ui.view3dLoading}</p>
+                  {grid}
                 </div>
-                {v.faults.length > 0 && (
-                  <div className="station-fault">
-                    ⚠ {v.faults.length} {tr.ui.problems}
-                  </div>
-                )}
-                {v.here && <div className="station-here">📍 {tr.ui.location}</div>}
-              </button>
-            );
-          })}
-        </section>
+              }
+            >
+              <Scene3D
+                stations={info}
+                location={s.location}
+                goal={walking ?? open ?? s.location}
+                look={sceneLook(s, night)}
+                onPick={openStation}
+                onArrive={(id) => {
+                  if (walking === id) {
+                    setWalking(null);
+                    setOpen(id);
+                  }
+                }}
+                coachStation={coachStation}
+                coach={coachStation ? bubble() : null}
+                onLost={() => setSceneFailed(true)}
+                hint={sol1}
+              />
+            </Suspense>
+          </SceneBoundary>
+        ) : (
+          <>
+            {view === '3d' && sceneFailed && <p className="note warn small">{tr.ui.view3dFailed}</p>}
+            {grid}
+          </>
+        )}
         <aside className="side">
-          <div className="card">
-            <h3>{tr.sols[s.sol]?.title}</h3>
-            <p className="small">🌤 {tr.sols[s.sol]?.weather}</p>
-          </div>
-          <div className="card">
-            <h3>{tr.ui.inventory}</h3>
-            <ul className="inv">
-              {Object.entries(s.items).map(([k, n]) => (
-                <li key={k} className={n === 0 ? 'dim' : ''}>
-                  {tr.items[k]}: <strong>{n}</strong>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <button className={`btn big end-btn ${s.faults.length === 0 ? 'primary' : ''}`} disabled={endLocked} onClick={endDay}>
-            🌙 {tr.ui.endSol}
-          </button>
-          {endLocked ? <p className="dim small">{tr.ui.sol1Locked}</p> : s.faults.length > 0 && <p className="dim small">{tr.ui.deferAuto}</p>}
+          <Inventory items={s.items} />
+          {m.kind !== 'done' && (
+            <button className="btn big end-btn" disabled={endLocked || busy} onClick={endDay} title={endLocked ? tr.ui.sol1Locked : undefined}>
+              🌙 {tr.ui.endSol}
+            </button>
+          )}
+          {endLocked && <p className="dim small">{tr.ui.sol1Locked}</p>}
         </aside>
       </main>
       {open && (
-        <StationPanel s={s} stationId={open} level={level} sol1={sol1} act={doAct} open={setOpen} close={() => setOpen(null)} />
+        <StationPanel
+          s={s}
+          stationId={open}
+          level={level}
+          sol1={sol1}
+          coach={step === 'choose' ? bubble(true) : null}
+          act={doAct}
+          open={(id) => setOpen(id)}
+          close={() => setOpen(null)}
+        />
+      )}
+      {night && (
+        <div className="night-fx" role="status">
+          <span>🌙 {tr.ui.nightFalls}</span>
+        </div>
       )}
       {confirm && (
         <div className="panel-backdrop" onClick={() => setConfirm(false)}>
-          <section className="panel small-panel" role="dialog" aria-label={tr.ui.endSolConfirm} onClick={(e) => e.stopPropagation()}>
+          <section className="panel small-panel" role="dialog" aria-modal="true" aria-label={tr.ui.endSolConfirm} onClick={(e) => e.stopPropagation()}>
             <h2>🌙 {tr.ui.endSolConfirm}</h2>
             {s.sol === s.config.solCount && <p>{tr.ui.endSolLast}</p>}
             {s.faults.length > 0 && (
@@ -520,13 +686,7 @@ export function Play({
             )}
             {criticalResources(s).length > 0 && s.hoursLeft > 0 && <p className="note danger small">♥ {fmt(tr.ui.endSolHours, { h: fmtHours(s.hoursLeft) })}</p>}
             <div className="row wrap">
-              <button
-                className="btn primary"
-                onClick={() => {
-                  setConfirm(false);
-                  act({ type: 'endSol' });
-                }}
-              >
+              <button className="btn primary" onClick={reallyEnd}>
                 {tr.ui.yes}
               </button>
               <button className="btn" onClick={() => setConfirm(false)}>

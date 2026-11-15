@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { DEFAULT_CONFIG, data, engine, fmt, tr } from '../content';
 import { criticalResources, healthStatus, previewParts, resourceStatus, type Status } from '../sim/selectors';
 import { RESOURCES, type Action, type Deltas, type GameState, type ResourceId, type SolSnapshot } from '../sim/types';
-import { colors, resourceIcon, statusColor, statusIcon } from './tokens';
+import { colors, itemIcon, resourceIcon, statusColor, statusIcon } from './tokens';
 
 export type Level = 'junior' | 'commander';
 
@@ -26,6 +26,7 @@ export function Bar({
   level,
   hint,
   change,
+  danger,
 }: {
   label: string;
   icon: string;
@@ -35,7 +36,10 @@ export function Bar({
   hint?: string;
   /** Change caused by the last action (shown next to the label until the next action). */
   change?: number;
+  /** Danger line: below this the bar hurts Health. */
+  danger: number;
 }) {
+  const v = Math.max(0, Math.min(100, value));
   return (
     <div className={`bar bar-${status}`} title={hint}>
       <div className="bar-head">
@@ -49,11 +53,15 @@ export function Bar({
           )}
         </span>
         <span className="bar-status" style={{ color: statusColor[status] }}>
-          <span aria-hidden>{statusIcon[status]}</span> {level === 'commander' ? fmtNum(value, 0) : tr.status[status]}
+          <span aria-hidden>{statusIcon[status]}</span> {tr.status[status]}
         </span>
       </div>
-      <div className="bar-track" role="meter" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
-        <div className="bar-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: statusColor[status] }} />
+      <div className="bar-track" role="meter" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100} aria-label={`${label}: ${Math.round(value)}, ${tr.status[status]}`}>
+        <div className="bar-fill" style={{ width: `${v}%`, background: statusColor[status] }} />
+        <span className="bar-danger" style={{ left: `${danger}%` }} aria-hidden />
+        <span className="bar-num" aria-hidden>
+          {fmtNum(value, 0)}
+        </span>
       </div>
     </div>
   );
@@ -80,33 +88,36 @@ export function TopBar({
   level,
   flash = null,
   coach = null,
+  extra = null,
 }: {
   s: GameState;
   level: Level;
   /** Last action, to show what it changed next to each bar. */
   flash?: { action: Action; before: GameState } | null;
-  /** Tutorial highlight. */
-  coach?: 'bars' | 'hours' | null;
+  /** Tutorial bubble shown under the bars or the hours. */
+  coach?: { at: 'bars' | 'hours'; bubble: ReactNode } | null;
+  /** Right-hand slot (view switch). */
+  extra?: ReactNode;
 }) {
   const rules = s.config.rules;
   const change = flash ? (previewParts(engine, flash.before, flash.action).preview ?? {}) : {};
   return (
     <header className="topbar">
-      <div className={`sol-counter ${coach === 'hours' ? 'coach-target' : ''}`}>
-        <span className="sol-big">
-          {tr.ui.sol} {s.sol}
-        </span>
-        <span className="dim">
-          {' '}
-          {tr.ui.of} {s.config.solCount}
-        </span>
+      <div className={`sol-counter ${coach?.at === 'hours' ? 'coach-target' : ''}`}>
+        <div className="sol-line">
+          <span className="sol-big">
+            {tr.ui.sol} {s.sol}
+            <span className="dim sol-of"> / {s.config.solCount}</span>
+          </span>
+        </div>
         <div className="hours">
-          <span aria-hidden>{resourceIcon.hours}</span> {tr.ui.hoursLeft}: <strong>{fmt(tr.ui.hoursOf, { left: fmtNum(s.hoursLeft) })}</strong>
+          <span aria-hidden>{resourceIcon.hours}</span> <strong>{fmt(tr.ui.hoursOf, { left: fmtNum(s.hoursLeft) })}</strong>
         </div>
         <HoursStrip left={s.hoursLeft} total={s.config.hoursPerSol} />
         <DoseMeter dose={s.dose} />
+        {coach?.at === 'hours' && coach.bubble}
       </div>
-      <div className={`bars ${coach === 'bars' ? 'coach-target' : ''}`}>
+      <div className={`bars ${coach?.at === 'bars' ? 'coach-target' : ''}`}>
         {RESOURCES.map((r) => (
           <Bar
             key={r}
@@ -117,6 +128,7 @@ export function TopBar({
             level={level}
             hint={tr.resDesc[r]}
             change={change[r]}
+            danger={rules.critical}
           />
         ))}
         <Bar
@@ -127,9 +139,28 @@ export function TopBar({
           level={level}
           hint={tr.resDesc.health}
           change={change.health}
+          danger={25}
         />
+        {coach?.at === 'bars' && coach.bubble}
       </div>
+      {extra && <div className="topbar-extra">{extra}</div>}
     </header>
+  );
+}
+
+/** Inventory as icon + count (name in the tooltip and for screen readers). */
+export function Inventory({ items }: { items: Record<string, number> }) {
+  return (
+    <ul className="inv" aria-label={tr.ui.inventory}>
+      {Object.entries(items).map(([k, n]) => (
+        <li key={k} className={n === 0 ? 'inv-empty' : ''} title={tr.items[k]} aria-label={`${tr.items[k]}: ${n}`}>
+          <span className="inv-icon" aria-hidden>
+            {itemIcon[k] ?? '📦'}
+          </span>
+          <strong aria-hidden>×{n}</strong>
+        </li>
+      ))}
+    </ul>
   );
 }
 

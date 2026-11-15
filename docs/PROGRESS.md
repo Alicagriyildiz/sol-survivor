@@ -1,5 +1,63 @@
 # İlerleme
 
+## Oturum 5 — 2026-11-15 (sabah, sunum öncesi) — sade ekran + 3D üs sahnesi
+
+Oyun kuralları, içerik sayıları, veri, çekirdek ve Kara Kutu değişmedi. Denge testleri aynı sonuçla geçiyor.
+
+### 1. Sade ekran (iki görünümde de)
+- Renk token'ları açıldı (zemin `#1d2745`, yüzeyler `#28345a` / `#34426d`, kenar `#56679a`); kartlar gölgeli; taban yazı 17 px. Turuncu/amber yok (ekran görüntüsü taramasında en çok %0,4 sarımsı piksel, hepsi emoji; envanter emojileri değiştirildi).
+- Üst çubuk: büyük çubuklar, üstünde sayı (her iki seviyede), tehlike eşiği kesikli çizgi, renk + simge + durum sözcüğü. Mesai şeridi 16 px hücreler. Sol başlığı üst çubuktan kaldırıldı (brifingde var).
+- Görev satırı tek satır: "{yer} git: {sorun}" + 👟 yürüme bedeli + yeri açan düğme; diğer sorunlar küçük etiketler; "Saatler nereye gitti?" ⏱ simgesinin arkasında. Seçenek önermez.
+- Öğretici: hedefin yanında küçük sarı baloncuk, adım başına tek cümle.
+- Seçenek kartı: ad, ⏱ toplam (👟/🚀/🔧 dökümü), oklar, kısa etiket, "Bunu yap"; "neden" metni "ⓘ Neden?" ile açılır. Sol 12 gerçek olay kartının açıklaması "Daha fazla" ile açılır.
+- "Son yaptığın" tek satır (oklar zaten çubuklarda). Envanter simge + sayı. İstasyon kartlarında ⚠ sorun, 🔧 bakım saati, 🔒, 📍. Telefonda kartlar iki sütun.
+- Panel klavyeyle: açılınca odak "Kapat"ta, Esc kapatır, odak geri döner.
+
+### 2. 3D sahne (`src/scene/`)
+- `three@0.187.0`, `@react-three/fiber@9.8.2`, `@react-three/drei@10.7.9` (sabit sürüm; drei'den yalnızca `Instances`). Fizik yok, dış dosya yok.
+- Sabit izometrik ortografik kamera, döndürme/yakınlaştırma yok. Üs kümesi (Ana üs, Sera, Sığınak, Batarya, Hava kilidi; koridorlarla bağlı), dışarıda ve uzakta Güneş paneli alanı ve İniş alanı (patika ile). Silüetler: kubbeli silindir + anten, saydam kubbe + bitkiler, toprak tümsek + kapı, kutu + batarya + radyatör kanatları, yatay silindir + sandıklar, eğik panel dizisi, işaretli daire.
+- Etiketler sahne üstünde DOM (Türkçe ad, zıplayan ⚠ sayısı, 🔧 saat, 🔒, soluk görünüm). Açık sorunda ayrıca 3D sarı sekizyüzlü işaret.
+- Astronot: yol noktaları (iç yürüyüş ana üsten, EVA hava kilidi kapısından), ≤ 1,5 sn, tıklayınca atlanır, yürürken tıklama kuyruğa girmez; varışta mevcut panel açılır. Panel eylemsiz kapanırsa gerçek konuma geri yürür.
+- Durum: güç düşük → ışıklar kısık/sönük; fırtına → sis + toz katmanı, dış istasyonlar soluk ve kilitli; Günü bitir → 1,1 sn gece; Sol 6 güçlendirme → büyük tümsek + torbalar; panel tozu → mat paneller; Sol 12 → mor-pembe gökyüzü.
+- Sağlamlık: geç yüklenen parça (`React.lazy`), yüklenirken kartlar; WebGL yoksa 3D seçeneği kapalı; yükleme hatası / sahne hatası / bağlam kaybı → hata sınırı → kartlar (sayfa boyunca). Başlangıçta ve üst çubukta "3D / Sade" seçimi (`localStorage`, `?view=`).
+- Performans: `frameloop="demand"` (boşta 3 sn'de 0 çizim çağrısı, ölçüldü), piksel oranı ≤ 1,5, gölge yok (astronotta sahte gölge), tekrar eden şekiller instanced, Lambert malzeme. Sahne her sol yeniden kurulur; 14 ardışık sahnede WebGL bağlam uyarısı çıkmadı.
+- Dar ekran (< 640 px): sıkı yerleşim (dış istasyonlar üssün arkasında), kısa etiket adları, öğretici baloncuğu sahnenin üstünde.
+- Erişilebilirlik: istasyonlar ayrıca gizli bir düğme listesi (Tab ile görünür olur), adı + sorun + bakım + kilit + yürüme yazar.
+- Çift eylem koruması `App.act` içinde (yalnız güncel duruma uygulanır).
+
+### Doğrulama (headless Chrome, SwiftShader WebGL, CDP ile gerçek tıklama)
+| Koşu | Sonuç |
+|---|---|
+| 3D, 1280×800, geliştirme | 7 istasyonun hepsi gerçek fare tıklamasıyla açıldı; yürüyüş atlama; Sol 1-13 oynandı (görev 8, hep ilk seçenek → Sol 13'te Güç'ten kayıp); fırtına (Sol 9-10), gece geçişi, Sol 12 mor gökyüzü ve sığınak paneli, görev sonu, Kara Kutu. Her seçimde çift tıklama: mesai bir kez düştü. |
+| 3D, 390×844 dokunmatik, üretim (`/sol-survivor/`) | Aynı akış; 7 istasyon dokunarak açıldı. Konsol temiz. |
+| 3D, 1280×800, üretim | Aynı akış, konsol temiz. |
+| Sade, 1280×800 | Aynı akış, konsol temiz. |
+| WebGL kapalı, üretim | 3D seçeneği kapalı ("Bu tarayıcıda 3D açılmıyor"), oyun kartlarla açıldı. |
+| Klavye | Tab → istasyon düğmesi, Enter → yürüyüş + panel, odak "Kapat"ta, Esc kapatır. |
+| 3D parça yüklenemedi (geliştirme sunucusu modülü yeniden yüklerken, kendiliğinden oldu) | Hata sınırı kartlara düştü, oyun sürdü. Bu bulgudan sonra hata sayfa boyunca hatırlanıyor (her solde yeniden denemiyor). |
+
+Gerçek GPU'lu dizüstü ve gerçek telefonda **denenmedi** (yalnız yazılım WebGL).
+
+### Paket
+- Ana parça 360 kB (gzip 115 kB), CSS 18,6 kB (gzip 4,5 kB). 3D parçası ayrı ve geç yüklenir: 940 kB (gzip 249 kB; çoğu three.js çekirdeği, R3F tüm `THREE` ad alanını katalogluyor). Vite 500 kB uyarısı bu parça için.
+
+### Testler
+81 test (69 eski + 12 yeni `tests/scene.test.ts`: yerleşim, EVA uzaklığı, yol noktaları, ≤ 1,5 sn yürüyüş, enterpolasyon, dar ekran kipi, kamera izdüşümünün three.js ile eşitliği ve etiketlerin ekranda kalması, `sceneLook` durumları). Tip denetimi ve üretim derlemesi temiz.
+
+### Bilinen görsel sorunlar
+- Geniş ekranda "Hava kilidi ve depo" etiketi Ana üs'ün hemen üstünde; Ana üs etiketiyle 50 px arayla duruyor, karışabilir.
+- Öğretici baloncuğu (geniş ekranda, 3D) Ana üs etiketinin üstünde dururken Hava kilidi etiketini kısmen örter.
+- Sığınak tümseğinin büyümesi Sol 6'dan sonra belirgin ama ince (%30).
+- Fırtınadaki toz bir CSS çizgi deseni; gerçek parçacık değil.
+- Geliştirme modunda R3F içinden "THREE.Clock deprecated" uyarısı (üretimde yok).
+- Emojiler sistem yazı tipinden: cihaza göre farklı görünür (🚀, 🧑‍🚀 sarımsı).
+
+### Kalan işler
+- Gerçek cihazda (entegre grafik, telefon) akıcılık kontrolü.
+- Oturum 4'teki denge işleri (Sol 6 regolit, dikkatli botta Kalkan payı) değişmedi.
+
+---
+
 ## Oturum 4 — 2026-11-15 (sabah) — acil yedek bedelli oldu
 
 ### Sorun

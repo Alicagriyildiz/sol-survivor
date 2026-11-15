@@ -14,15 +14,18 @@ export function SolarEventCard({ s }: { s: GameState }) {
     <div className="card data-card">
       <h4>☀ {fmt(tr.solarEvent.title, { date: fmtDate(e.date) })}</h4>
       <p>{fmt(tr.solarEvent.line, { cls: e.classType, level: levelText(e) })}</p>
-      <p className="small">{tr.solarEvent.kid}</p>
-      <p className="small">{fmt(tr.solarEvent.effect, { shield: fmtNum(e.shieldHit), rad: fmtNum(mGy(e.radiation), 1) })}</p>
-      <p className="dim small">{tr.solarEvent.scale}</p>
-      <p className="dim small">
-        {fmt(tr.solarEvent.source, { id: e.flrID })} ·{' '}
-        <a href={e.link} target="_blank" rel="noopener noreferrer">
-          DONKI
-        </a>
-      </p>
+      <details className="why">
+        <summary>ⓘ {tr.ui.moreInfo}</summary>
+        <p className="small">{tr.solarEvent.kid}</p>
+        <p className="small">{fmt(tr.solarEvent.effect, { shield: fmtNum(e.shieldHit), rad: fmtNum(mGy(e.radiation), 1) })}</p>
+        <p className="dim small">{tr.solarEvent.scale}</p>
+        <p className="dim small">
+          {fmt(tr.solarEvent.source, { id: e.flrID })} ·{' '}
+          <a href={e.link} target="_blank" rel="noopener noreferrer">
+            DONKI
+          </a>
+        </p>
+      </details>
     </div>
   );
 }

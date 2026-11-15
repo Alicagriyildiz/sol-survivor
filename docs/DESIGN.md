@@ -143,6 +143,19 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - İstasyon kartındaki yürüme süresi bulunduğun yerden gerçek süredir (`walk(A) + walk(B)`).
 - **Kara Kutu listesi**: aynı arızanın sonraki günlerdeki (yeniden açılıp tekrar ertelenen) kararları gizlenir, ilk karar "N gün üst üste ertelendi" notuyla gösterilir. Gizlenenler değiştirilemez; ilkini değiştirmek zinciri değiştirir.
 
+## 6c. Sade ekran ve 3D sahne (Oturum 5)
+- **Tek odak:** görev satırı tek satır: "{yer} git: {sorun}" + yürüme bedeli (👟) + yeri açan düğme. Hangi seçeneğin doğru olduğunu söylemez. Diğer sorunlar küçük etiketler; "Saatler nereye gitti?" ⏱ simgesinin arkasında. Sorunlar bitince Günü bitir yalnız görev satırında (yan sütunda gizlenir).
+- **Öğretici** büyük kutu değil, hedefin yanında küçük sarı baloncuk; adım başına tek kısa cümle. Telefonda 3D'de baloncuk sahnenin üstünde durur (dış istasyonları örtmesin diye).
+- **Çubuklar:** her iki seviyede sayı görünür; tehlike eşiği (kaynaklarda `rules.critical`, Sağlıkta 25) kesikli çizgi; renk + simge + durum sözcüğü. Komutan seviyesindeki fark artık yalnızca etki önizlemesinde (oklar yerine sayı) ve ipucu etiketlerinde.
+- **Uzun metinler** isteyince açılır: seçenek "neden" metni ve Sol 12 gerçek olay kartının açıklaması "ⓘ" ile.
+- **İstasyonlar** dışarıdan bakım işini gösterir (🔧 + iş saati; yapıldıysa ✓). Envanter simge + sayı (ad ipucunda ve ekran okuyucuda).
+- **3D sahne** (`src/scene/`, ayrı geç yüklenen parça) yalnızca okur: `stationInfo` (seçicilerden) ve `sceneLook` (durumdan türetilen görseller). Eylem yine yalnız paneldeki düğmelerle `engine.step` üzerinden gider.
+  - Tıklama → astronot yol noktalarından yürür (≤ 1,5 sn, mesafeyle orantılı) → panel açılır. Yürürken tıklama yürüyüşü atlar, kuyruğa girmez. Panel kapanınca eylem yapılmadıysa astronot gerçek konumuna (`state.location`) geri yürür, çünkü yürüme saati eylemle ve gerçek konumdan hesaplanır.
+  - Çift eylem koruması: `App.act` yalnızca güncel duruma uygulanır (aynı tıklama iki kez gelirse ikincisi yok sayılır). Mesai, eylem bir kez işlendiğinde düşer (headless testte çift tıklama ile doğrulandı).
+  - Durum görselleri: Güç "Azalıyor" → üs ışıkları kısık, "Tehlike/Bitti" → sönük; fırtına bayrağı → sis + toz katmanı, dış istasyonlar soluk ve 🔒; Günü bitir → 1,1 sn gece geçişi (yalnız 3D); Sol 6'da sığınak güçlendirildiyse tümsek büyür; panellerde toz değiştiricisi varken paneller mat; Sol 12 olay günü gökyüzü mor-pembe. Kalkan için ayrıca görsel yok.
+  - Dar ekranda (< 640 px) sıkı yerleşim: dış istasyonlar üssün arkasında, etiketlerde kısa adlar.
+- **Görünüm seçimi:** başlangıç ekranında ve üst çubukta "3D / Sade". Varsayılan: WebGL varsa 3D. Seçim tarayıcıda saklanır (`localStorage`, yoksa yalnız o oturum); `?view=2d|3d` adresle zorlar. WebGL yoksa 3D seçeneği kapalıdır; parça yüklenemezse, sahne hata verirse ya da WebGL bağlamı kaybolursa hata sınırı kartlı ekrana döner ve sayfa yenilenene kadar orada kalır.
+
 ## 7. Varsayımlar
 - Sol = 10 saat mesai + kritik hasar için 14 gece saati. Mars gününün tam uzunluğu modellenmedi.
 - Yürüme hep ana koridor üzerinden: `walk(A) + walk(B)`.
@@ -161,6 +174,9 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - Arayüzde rastgele görev numarası `Math.random` ile seçilir (yalnız arayüz; çekirdek değil).
 - Puan = kazanırsa 1000 + Sağlık×5 + kaynak toplamı − doz×2 + sol×20 (sadece gösterim).
 - Tüm metinler şimdilik yalnızca Türkçe (`lang/tr.ts`); İngilizce aynı şekille eklenebilir.
+- (Oturum 5) 3D yürüyüş yalnızca görseldir; süresi mesai saatinden değil mesafeden gelir (en çok 1,5 sn). Mesai bedeli panelde ve görev satırında yazar.
+- (Oturum 5) Sahnenin tepki verdiği içerik kimlikleri (`storm`, `shelterReinforced`/`shelterWater`, adında "dust" geçen değiştiriciler, `s12_spe`) sunum katmanında, `src/scene/look.ts` içinde eşlenir; çekirdek bunları bilmez.
+- (Oturum 5) Gece geçişi yalnız 3D görünümde oynar; sade görünümde Günü bitir anında rapora geçer.
 
 ## 8. Gerçek veri bağlantıları (Oturum 3)
 Ayrıntı ve kaynaklar: `docs/DATA.md` (İngilizce, jüri için). Kod: `src/content/data.ts` (saf), anlık görüntüler `src/data/`, indirme `scripts/fetch-data.mjs`.

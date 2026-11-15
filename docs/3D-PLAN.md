@@ -1,4 +1,14 @@
-# 3D sahne planı (sonraki oturum)
+# 3D sahne planı
+
+> **Durum (Oturum 5, 2026-11-15): yapıldı.** Ayrıntılar `docs/PROGRESS.md` Oturum 5 ve `docs/DESIGN.md` §6c.
+> Plandan sapmalar: (1) çıplak `three` yerine istenen `three` + `@react-three/fiber` + `@react-three/drei` (yalnızca `Instances`);
+> (2) yürüme süresi saat tablosundan değil mesafeden, en çok 1,5 sn (mesai bedeli panelde yazar);
+> (3) istasyon adları `drei/Html` yerine sahnenin üstünde düz DOM katmanı (React 19'da `Html` her etiket için ayrı kök açıp
+> "synchronously unmount" hatası veriyordu; ayrıca kamera sabit olduğundan etiket konumu yalnız ekran boyutu değişince hesaplanır);
+> (4) kod `src/scene/` altında: `layout.ts` (yerleşim, yol noktaları, kamera izdüşümü; saf, testli), `look.ts` (durumdan görseller; saf, testli),
+> `Scene3D.tsx` (geç yüklenen parça). Toz için parçacık yerine CSS katmanı.
+
+## İlk plan (Oturum 1-4)
 
 Amaç: mevcut 2D geçici arayüzün **istasyon ızgarasının yerine** sabit açılı, düşük poligonlu bir 3D üs
 sahnesi koymak. Paneller, üst çubuk, raporlar ve Kara Kutu aynen kalır. 3D yetişmezse 2D arayüz sunumda kullanılır,
