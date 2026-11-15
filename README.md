@@ -43,12 +43,14 @@ Every push to `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`).
 - `src/data/` – NASA data snapshots (DONKI, RadLab, OSDR) and hand-entered published values
 - `src/blackbox/` – replay, counterfactual, explanation, rescue search
 - `src/bots/` – balance bots
-- `src/ui/` – 2D interface
+- `src/ui/` – interface (simple card view, screens, Black Box); `src/content/lang/` – Turkish and English text
+- `src/scene/` – first-person 3D view (lazy chunk): world, hab, hand, one file per station; every choice is acted out
+- `public/models/kenney/` – CC0 low-poly models (Kenney Space Kit), see `CREDITS.md`
 - `scripts/fetch-data.mjs` – one-time data download
 - `docs/` – design, data, sources, progress, playtest notes
 
-No accounts, no network calls at runtime, and no external images, fonts or sounds. This is not an official NASA product.
+No accounts and no network calls at runtime. No external images, fonts or sounds; the only third-party art is CC0 3D models (Kenney Space Kit, see `CREDITS.md`). This is not an official NASA product.
 
 ## License
 
-MIT (code). NASA data is used under NASA's media and data guidelines; see `docs/DATA.md` for attribution.
+MIT (code). 3D models: Kenney Space Kit, CC0 1.0 (`CREDITS.md`). NASA data is used under NASA's media and data guidelines; see `docs/DATA.md` for attribution.

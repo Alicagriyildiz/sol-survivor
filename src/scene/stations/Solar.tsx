@@ -2,7 +2,7 @@
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import * as THREE from 'three';
-import { colorHex, colors } from '../../ui/tokens';
+import { colorHex } from '../../ui/tokens';
 import { Blinker, Lamp, now, RBox, showsBefore, stationAct, type RT, type StationProps } from '../core';
 import { PANEL_COLS, PANEL_H, PANEL_ROWS, PANEL_TILT, PANEL_W, PANEL_WIPE_FAULTS, panelAt, RADIATOR, type V3 } from '../world';
 
@@ -45,15 +45,32 @@ function SolarField({ rt, dustLevel }: { rt: MutableRefObject<RT>; dustLevel: nu
     const refill = () => {
       ctx.globalCompositeOperation = 'source-over';
       ctx.clearRect(0, 0, DUST_W, DUST_H);
-      ctx.fillStyle = colors.marsDust;
-      ctx.globalAlpha = 0.93;
+      // A soft, uneven film of dust (thicker towards the lower edge where it slides down),
+      // with drifts and a few streaks, not a speckled carpet.
+      const base = ctx.createLinearGradient(0, 0, 0, DUST_H);
+      base.addColorStop(0, 'rgba(201,179,174,0.78)');
+      base.addColorStop(1, 'rgba(190,162,156,0.95)');
+      ctx.fillStyle = base;
       ctx.fillRect(0, 0, DUST_W, DUST_H);
-      for (let i = 0; i < 900; i++) {
+      for (let i = 0; i < 140; i++) {
         const x = (Math.sin(i * 12.9898) * 0.5 + 0.5) * DUST_W;
         const y = (Math.sin(i * 78.233) * 0.5 + 0.5) * DUST_H;
-        ctx.globalAlpha = 0.25 + ((i * 7) % 10) / 20;
-        ctx.fillStyle = i % 3 ? colors.marsRose : colors.marsBrown;
-        ctx.fillRect(x, y, 2 + (i % 4), 2 + (i % 3));
+        const r = 10 + ((i * 13) % 30);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        const dark = i % 3 === 0;
+        g.addColorStop(0, dark ? 'rgba(154,122,118,0.35)' : 'rgba(222,206,200,0.35)');
+        g.addColorStop(1, 'rgba(201,179,174,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      ctx.strokeStyle = 'rgba(176,136,132,0.25)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 18; i++) {
+        const x = (Math.sin(i * 3.7) * 0.5 + 0.5) * DUST_W;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + 10, DUST_H);
+        ctx.stroke();
       }
       ctx.globalAlpha = 1;
       grid.fill(0);

@@ -393,3 +393,15 @@ a { color: var(--c-accent); }
 .demo-card summary { cursor: pointer; }
 .demo-card .row { margin-top: 0.4rem; }
 @media (max-width: 640px) { .hide-narrow { display: none; } .fp-hud { top: auto; bottom: 64px; right: 6px; max-width: 80%; } }
+.fp-loading { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); z-index: 3; margin: 0; padding: 0.2rem 0.6rem; border-radius: 8px; background: rgba(21, 29, 54, 0.8); }
+.fp-clock { display: inline-block; animation: spin 1.2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fp-clock { animation: none; } }
+/* 3D: the night falls over the visible sky instead of hiding it. */
+.play.view-3d .night-fx { background: rgba(11, 18, 40, 0.55); }
+@media (max-width: 640px) {
+  .fp-dock { padding: 6px; gap: 0.35rem; }
+  .fp-dock .inv { padding: 0.25rem; gap: 0.2rem; }
+  .fp-dock .inv li { font-size: 0.85rem; padding: 0.1rem 0.3rem; }
+  .fp-dock .end-btn { font-size: 0.95rem; padding: 0.45rem 0.7rem; }
+}

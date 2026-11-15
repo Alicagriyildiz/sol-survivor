@@ -3,6 +3,7 @@
 // The simulation step has already happened when an action plays here: skipping or
 // interrupting the animation never changes the game.
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
+import { useProgress } from '@react-three/drei';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { fmt, tr } from '../content';
@@ -376,6 +377,17 @@ function Overlay({ rt, labels, arrow, target, stations }: { rt: MutableRefObject
   return null;
 }
 
+/** "Loading the 3D world…" while models download (the scene is usable meanwhile). */
+function LoadingNote() {
+  const { active, progress } = useProgress();
+  if (!active) return null;
+  return (
+    <p className="fp-loading small" role="status">
+      ⏳ {tr.act.loading} {Math.round(progress)}%
+    </p>
+  );
+}
+
 function ContextWatch({ onLost }: { onLost: () => void }) {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
@@ -603,6 +615,7 @@ export default function FirstPerson(props: FirstPersonProps) {
           <Overlay rt={rt} labels={labels} arrow={arrow} target={target} stations={stations} />
         </Canvas>
         <div className="fp-visor" aria-hidden />
+        <LoadingNote />
         {stations.map((s) => (
           <div key={s.id} ref={(el) => void (labels.current[s.id] = el)} className={`fp-label ${s.faults ? 'has-fault' : ''} ${s.locked ? 'locked' : ''}`} onClick={() => pick(s.id)} aria-hidden style={{ display: 'none' }}>
             <span className="fp-name">
@@ -635,7 +648,9 @@ export default function FirstPerson(props: FirstPersonProps) {
               </p>
             ) : phase === 'do' ? (
               <>
-                <p className="fp-run-hint">{auto ? tr.act.autoDoing : hintText}</p>
+                <p className="fp-run-hint">
+                  {kind === 'wait' && <span className="fp-clock" aria-hidden>🕒</span>} {auto && kind !== 'wait' ? tr.act.autoDoing : hintText}
+                </p>
                 <div className="fp-progress" aria-hidden>
                   <div ref={bar} />
                 </div>

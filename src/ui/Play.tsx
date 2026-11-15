@@ -625,7 +625,9 @@ export function Play({
   const openStation = (id: string) => {
     if (busy) return;
     // 3D: walk there first, the panel opens on arrival. Already there: open right away.
-    if (use3d && id !== viewAt) {
+    // Locked (storm / landing before Sol 13): no walk, the panel says why.
+    const locked = info.find((x) => x.id === id)?.locked;
+    if (use3d && id !== viewAt && !locked) {
       setOpen(null);
       setWalking(id);
     } else setOpen(id);

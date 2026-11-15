@@ -56,7 +56,7 @@ Tüm rastgelelik `init` anında, tohumdan (mulberry32) çekilen **zarlarla** yap
 
 ### Seviyeler (sunum katmanı; çekirdek aynı)
 - `junior` (varsayılan): 3 kaynak çubuğu + Sağlık, durum ışığı + simge + kelime ("İyi/Azalıyor/Tehlike/Bitti"), seçeneklerde "neden" metni, yatırım/sonra-pahalı ipucu etiketleri, anlık etki okları (▲▼).
-- `commander`: sayılar ve doz görünür, anlık etki sayıyla, ipucu etiketleri yok.
+- `commander`: sayılar ve doz görünür, anlık etki sayıyla, ipucu etiketleri yok. **Oturum 6:** görev ayarı daha zor: başlangıç Güç 57, Yaşam Desteği 61 (Genç 70/70); içerik sayıları aynı (`configFor`, `tests/commander.test.ts`). Ölçüm (tohum 1-200): dikkatli bot %44, rastgele %2,5, hiçbir şey yapmayan %0, Sol 1'de kayıp yok.
 
 ## 2. Mimari
 - `src/sim/` saf çekirdek: `createEngine(content)` → `init(seed, config)`, `check`, `step(state, action)`, `validActions`, maliyetler. React/DOM/Date/Math.random yok. `step` girdiyi değiştirmez (testle doğrulanır).
@@ -156,6 +156,17 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
   - Dar ekranda (< 640 px) sıkı yerleşim: dış istasyonlar üssün arkasında, etiketlerde kısa adlar.
 - **Görünüm seçimi:** başlangıç ekranında ve üst çubukta "3D / Sade". Varsayılan: WebGL varsa 3D. Seçim tarayıcıda saklanır (`localStorage`, yoksa yalnız o oturum); `?view=2d|3d` adresle zorlar. WebGL yoksa 3D seçeneği kapalıdır; parça yüklenemezse, sahne hata verirse ya da WebGL bağlamı kaybolursa hata sınırı kartlı ekrana döner ve sayfa yenilenene kadar orada kalır.
 
+## 6d. Birinci şahıs 3D ve işin canlı yapılması (Oturum 6)
+- **Kamera** astronotun göz hizasında (1,6 m). Fareyle / parmakla sürükleyerek bakılır (yatay serbest, dikey sınırlı); işaretçi kilidi yok. Hareket tıklamayla: bakılan istasyona ya da alttaki istasyon düğmesine; kamera sabit yol noktalarından hafif baş sallanmasıyla yürür (en çok 3,2 sn), dokunmak yürüyüşü bitirir. Kilitli istasyona yürünmez; panel kilit notuyla açılır.
+- **Dünya** (`src/scene/world.ts`, saf ve testli): yuvarlak ana üs (r = 6 m) ve duvarındaki iş noktaları (Ana üs, Batarya), doğuda hava kilidi tüneli, batıda sera kubbesi, güneybatıda gömülü sığınak (tünelle), dışarıda belirgin uzakta güneş paneli alanı ve iniş alanı.
+- **Eylem türleri** (`src/content/actions.ts`, yalnız sunum): sil, bantla/yamala, parça değiştir, şalter/vana çevir, kablo tak, toprak yığ, konsol, bekle. Her arıza seçeneği ve her bakım işi bir türe bağlı (test). Tür, aleti (fırça, bant, anahtar/kartuş, kürek, fiş, tablet) ve istasyonun hangi nesnesinde oynanacağını seçer; istasyon dosyası (`src/scene/stations/*`) seçeneğe göre ayrıntıyı oynatır.
+- **Sıra:** seçenek seçilince `engine.step` hemen ve bir kez işlenir; sahne işi sonra oynatır. Animasyon atlanır ya da yarıda kalırsa durum zaten doğrudur. Üst çubuk iş bitene kadar önceki değerleri gösterir, bitince değişimler okla vurgulanır; iş kutusunda harcanan saat görünür; "Son yaptığın" kartı kalır.
+- **Elle yapma:** panelde sürükleyerek silme (toz gerçekten silinir; %85 temizlenince iş biter), diğer işlerde "Basılı tut" (ya da görünüme basılı tutmak / Boşluk). 5 sn dokunulmazsa astronot kendisi yapar; "Kendisi yapsın" (Enter) ve "Atla" (Esc) hep var. Sonuç harekete değil seçilen seçeneğe bağlıdır; başarısız olunamaz.
+- **Kalıcı sonuçlar** durumdan türetilir (`workLook`: son seçimler, açık arızalar ve yaşları, bayraklar, değiştiriciler, güç): temiz panel, yeni filtre, bant, kum sırtları, kayışlar, açık fanlar, takılı fener kablosu vb. sonraki sollerde de görünür. Ertelenen arızalar yaşlandıkça daha kötü görünür (daha çok kıvılcım/buhar).
+- **Sol 12:** gökyüzü mor ve hareketli perdeler; kask ekranında gerçek olayın tarihi ve sınıfı (DONKI kaydından); sığınakta beklemek içeriden oynar.
+- **Görev satırı (Ajan A ölçümü):** sorunlar bitip mesai kalınca ana düğme en zayıf göstergenin bakım işine götürür; "Günü bitir" ikinci düğme. Ölçüm: bu durumda yalnız "Günü bitir"e uymak kazanma oranını ~28 puan düşürüyordu. Seçenek kartı sırası değiştirilmedi ("ilk kart" oyuncusu %0 kazanıyor).
+- **Kalite kademesi:** dokunmatik küçük ekranda gölge yok, daha az parçacık, piksel oranı ≤ 1,25 (`?quality=low|high` zorlar).
+
 ## 7. Varsayımlar
 - Sol = 10 saat mesai + kritik hasar için 14 gece saati. Mars gününün tam uzunluğu modellenmedi.
 - Yürüme hep ana koridor üzerinden: `walk(A) + walk(B)`.
@@ -173,7 +184,7 @@ Ayar sırasında öğrenilenler (sonraki oturum için):
 - Otomatik pilot, kayıt bittikten sonra dikkatli bottur. Kurtarma oranı ayrıca "kayıt bitince astronot hiçbir şey yapmaz" kuralıyla da ölçülüp raporlanır.
 - Arayüzde rastgele görev numarası `Math.random` ile seçilir (yalnız arayüz; çekirdek değil).
 - Puan = kazanırsa 1000 + Sağlık×5 + kaynak toplamı − doz×2 + sol×20 (sadece gösterim).
-- Tüm metinler şimdilik yalnızca Türkçe (`lang/tr.ts`); İngilizce aynı şekille eklenebilir.
+- Metinler Türkçe ve İngilizce (`lang/tr.ts`, `lang/en.ts`, aynı anahtarlar; test eksik anahtarı yakalar). İlk dil: `?lang=`, sonra kayıtlı seçim, sonra tarayıcı dili.
 - (Oturum 5) 3D yürüyüş yalnızca görseldir; süresi mesai saatinden değil mesafeden gelir (en çok 1,5 sn). Mesai bedeli panelde ve görev satırında yazar.
 - (Oturum 5) Sahnenin tepki verdiği içerik kimlikleri (`storm`, `shelterReinforced`/`shelterWater`, adında "dust" geçen değiştiriciler, `s12_spe`) sunum katmanında, `src/scene/look.ts` içinde eşlenir; çekirdek bunları bilmez.
 - (Oturum 5) Gece geçişi yalnız 3D görünümde oynar; sade görünümde Günü bitir anında rapora geçer.
@@ -186,3 +197,8 @@ Ayrıntı ve kaynaklar: `docs/DATA.md` (İngilizce, jüri için). Kod: `src/cont
 - Veriler ekranı başlangıçtan ve görev sonundan açılır; her satırda veri, kaynak (bağlantı), tarih, oyunda neyi etkilediği. Elle girilen değerler "NASA'nın yayımladığı değerlere göre ayarlandı (veri seti değil)" etiketi taşır.
 - Dış bağlantılar (DONKI kaydı, OSDR çalışması, kaynak sayfası) yalnızca oyuncu tıklarsa açılır; oyun kendisi ağa çıkmaz.
 
+
+- (Oturum 6) 3D'nin içerik kimlikleri (eylem türü eşlemesi, `workLook` içindeki filtre/toz/arıza eşlemeleri, istasyon dosyalarının okuduğu bayraklar) sunum katmanındadır; çekirdek bilmez, sayı değiştirmez.
+- (Oturum 6) 3D'de panel kapanınca kamera bulunduğu yerde kalır (birinci şahısta geri yürümek tuhaf); mesai bedeli yine gerçek konumdan (`state.location`) hesaplanır ve panelde yazar.
+- (Oturum 6) Demo kısayolu (Başlangıç → "🎬 Demo") tohum 148'in kayıtlı eylem listesini motordan geçirerek ilgili sole kadar oynatır; kural değiştirmez. Ayrıntı `docs/DEMO.md`.
+- (Oturum 6) `?seed=N` üretimde de çalışır (Başlangıçta tohum alanını doldurur).
