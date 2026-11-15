@@ -289,7 +289,8 @@ function SandRidges({ rt, work }: StationProps) {
       // Ridges appear one panel after another as the job goes on.
       const k = Math.max(0, Math.min(1, h * all.length - (all.length - 1 - i)));
       o.position.set(p[0], 0.05, p[2] + 0.62);
-      o.scale.set(1.7, Math.max(0.001, k) * 0.12, 0.25);
+      if (k < 0.01) o.scale.setScalar(0.0001);
+      else o.scale.set(1.7, k * 0.12, 0.25);
       o.updateMatrix();
       m.setMatrixAt(i, o.matrix);
     });
@@ -326,7 +327,7 @@ function Straps({ rt, work }: StationProps) {
       const k = Math.max(0, Math.min(1, h * all.length - i));
       o.position.set(p[0], p[1] + 0.06, p[2]);
       o.rotation.set(-Math.PI / 2 + PANEL_TILT, 0, 0);
-      o.scale.set(k < 0.01 ? 0.001 : 1, 1, 1);
+      o.scale.setScalar(k < 0.01 ? 0.0001 : 1);
       o.updateMatrix();
       m.setMatrixAt(i, o.matrix);
     });
