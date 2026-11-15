@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { faultTitle, optionLabel, sourceText } from '../blackbox/text';
 import { SOURCES, engine, extra, fmt, numSuffix, tr } from '../content';
 import { activeNotes, reservesUsed, score, solReportRows, todayFaults, type ReportRow, type ReportSection } from '../sim/selectors';
@@ -9,6 +9,8 @@ import { LangSwitch } from './LangSwitch';
 import { Chart, DeltaList, fmtMGy, fmtNum, type Level } from './parts';
 import { colors, resourceIcon } from './tokens';
 import { webglAvailable, type View } from './view';
+
+const Backdrop = lazy(() => import('../scene/Backdrop'));
 
 export function Start({
   onStart,
@@ -36,75 +38,113 @@ export function Start({
   });
   const [level, setLevel] = useState<Level>('junior');
   const [tutorial, setTutorial] = useState(true);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [howOpen, setHowOpen] = useState(false);
+  const t = tr.title;
   return (
-    <div className="screen start">
-      <div className="lang-bar">
-        <LangSwitch big />
+    <div className="title-screen">
+      <div className="title-bg" aria-hidden>
+        {can3d && view === '3d' && (
+          <Suspense fallback={null}>
+            <Backdrop />
+          </Suspense>
+        )}
       </div>
-      <h1>🔴 {tr.ui.appTitle}</h1>
-      <p className="lead">{tr.ui.tagline}</p>
-      <div className="card">
-        <label className="field">
-          <span>{tr.ui.seed}</span>
-          <input type="number" min={1} value={seed} onChange={(e) => setSeed(Math.max(1, Number(e.target.value) || 1))} />
-          <button className="btn ghost" onClick={() => setSeed(1 + Math.floor(Math.random() * 9999))}>
-            🎲 {tr.ui.randomSeed}
-          </button>
-        </label>
-        <fieldset className="levels">
-          <legend>{tr.ui.level}</legend>
-          {(['junior', 'commander'] as Level[]).map((l) => (
-            <label key={l} className={`level ${level === l ? 'on' : ''}`}>
-              <input type="radio" name="level" checked={level === l} onChange={() => setLevel(l)} />
-              <strong>{l === 'junior' ? tr.ui.junior : tr.ui.commander}</strong>
-              <span className="dim small">{l === 'junior' ? tr.ui.juniorHint : tr.ui.commanderHint}</span>
-            </label>
-          ))}
-        </fieldset>
-        <fieldset className="levels views">
-          <legend>{tr.ui.viewLabel}</legend>
+      <div className="title-shade" aria-hidden />
+      <div className="title-corner">
+        <div className="title-toggle" role="group" aria-label={tr.ui.viewLabel}>
           {(['3d', '2d'] as View[]).map((v) => (
-            <label key={v} className={`level ${view === v ? 'on' : ''} ${v === '3d' && !can3d ? 'disabled' : ''}`}>
-              <input type="radio" name="view" checked={view === v} disabled={v === '3d' && !can3d} onChange={() => setView(v)} />
-              <strong>{v === '3d' ? `🧊 ${tr.ui.view3d}` : `▦ ${tr.ui.view2d}`}</strong>
-              <span className="dim small">{v === '3d' ? (can3d ? tr.ui.view3dHint : tr.ui.view3dNo) : tr.ui.view2dHint}</span>
-            </label>
-          ))}
-        </fieldset>
-        <label className="check">
-          <input type="checkbox" checked={tutorial} onChange={(e) => setTutorial(e.target.checked)} /> {tr.tutorial.option}
-        </label>
-        <button className="btn primary big" onClick={() => onStart(seed, level, tutorial)}>
-          🚀 {tr.ui.start}
-        </button>
-      </div>
-      <button className="btn" onClick={onData}>
-        📊 {tr.data.open}
-      </button>
-      <details className="card demo-card">
-        <summary>
-          🎬 <strong>{tr.act.demo}</strong> · <span className="dim small">{tr.act.demoTitle}</span>
-        </summary>
-        <p className="dim small">{tr.act.demoHint}</p>
-        <div className="row wrap">
-          {DEMO_STOPS.map((st, i) => (
-            <button key={String(st)} className="btn small" onClick={() => onDemo(st)}>
-              {i + 1} · {st === 4 ? tr.act.demo4 : st === 6 ? tr.act.demo6 : st === 12 ? tr.act.demo12 : tr.act.demoEnd}
+            <button key={v} type="button" aria-pressed={view === v} disabled={v === '3d' && !can3d} onClick={() => setView(v)}>
+              {v === '3d' ? t.view3d : t.view2d}
             </button>
           ))}
         </div>
-      </details>
-      <div className="card glossary">
-        <h3>{tr.ui.glossaryTitle}</h3>
-        <dl>
-          {tr.glossary.map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
-            </div>
-          ))}
-        </dl>
+        <LangSwitch />
       </div>
+      <main className="title-main">
+        <h1 className="title-logo" lang="en" aria-label="Sol Survivor">
+          <span className="title-logo-a">SOL</span>
+          <span className="title-logo-b">SURVIVOR</span>
+        </h1>
+        <p className="title-sub">{t.sub}</p>
+        <button className="title-start" onClick={() => onStart(seed, level, tutorial)}>
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden>
+            <path d="M7 4.5v15l12.5-7.5z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          </svg>
+          {t.start}
+        </button>
+        <div className="title-levels" role="radiogroup" aria-label={t.levelLabel}>
+          {(['junior', 'commander'] as Level[]).map((l) => (
+            <button key={l} type="button" role="radio" aria-checked={level === l} className={level === l ? 'on' : ''} onClick={() => setLevel(l)}>
+              <span className="title-level-name">{l === 'junior' ? t.junior : t.commander}</span>
+              <span className="title-level-line">{l === 'junior' ? t.juniorLine : t.commanderLine}</span>
+            </button>
+          ))}
+        </div>
+        <div className="title-links">
+          <label className="title-check">
+            <input type="checkbox" checked={tutorial} onChange={(e) => setTutorial(e.target.checked)} /> {t.tutorial}
+          </label>
+          <span className="title-seed">
+            <label htmlFor="title-seed">{t.mission}</label>
+            <input id="title-seed" type="number" min={1} value={seed} onChange={(e) => setSeed(Math.max(1, Number(e.target.value) || 1))} />
+            <button type="button" className="title-link" title={t.newMission} aria-label={t.newMission} onClick={() => setSeed(1 + Math.floor(Math.random() * 9999))}>
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden>
+                <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4.5h-4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </span>
+          <button type="button" className="title-link" aria-expanded={demoOpen} onClick={() => setDemoOpen((o) => !o)}>
+            {t.demo}
+          </button>
+          <button type="button" className="title-link" onClick={onData}>
+            {t.data}
+          </button>
+          <button type="button" className="title-link" onClick={() => setHowOpen(true)}>
+            {t.howTo}
+          </button>
+        </div>
+        {demoOpen && (
+          <div className="title-demo">
+            {DEMO_STOPS.map((st, i) => (
+              <button key={String(st)} type="button" className="title-link" onClick={() => onDemo(st)}>
+                {i + 1} · {st === 4 ? tr.act.demo4 : st === 6 ? tr.act.demo6 : st === 12 ? tr.act.demo12 : tr.act.demoEnd}
+              </button>
+            ))}
+          </div>
+        )}
+      </main>
+      <footer className="title-foot">
+        {t.footer} · {t.footerData}
+      </footer>
+      {howOpen && (
+        <div className="title-how-back" onClick={() => setHowOpen(false)}>
+          <section className="title-how" role="dialog" aria-modal="true" aria-label={t.howTo} onClick={(e) => e.stopPropagation()}>
+            <div className="title-how-head">
+              <h2>{t.howTo}</h2>
+              <button type="button" className="title-link" onClick={() => setHowOpen(false)} autoFocus>
+                {t.close}
+              </button>
+            </div>
+            <p>{tr.ui.tagline}</p>
+            <ol>
+              <li>{t.how1}</li>
+              <li>{t.how2}</li>
+              <li>{t.how3}</li>
+            </ol>
+            <p className="dim">{t.howData}</p>
+            <h3>{t.glossary}</h3>
+            <dl>
+              {tr.glossary.map(([k, v]) => (
+                <div key={k}>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
